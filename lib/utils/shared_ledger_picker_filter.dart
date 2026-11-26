@@ -78,12 +78,11 @@ extension SharedLedgerPickerFilter on BeeDatabase {
     String? kind,
     bool topLevelOnly = true,
   }) async {
-    // 定制：先按分类归属账本过滤（ledger_id 为 null 的通用分类在所有账本可见）。
+    // 定制 v38：分类严格绑定账本，只显示当前账本的分类。
+    // ledger_id 为 NULL 的内部行（如虚拟转账分类）在此不再全局可见。
     final visible = ctx?.ledgerId == null
         ? all
-        : all
-            .where((c) => c.ledgerId == null || c.ledgerId == ctx!.ledgerId)
-            .toList();
+        : all.where((c) => c.ledgerId == ctx!.ledgerId).toList();
     if (ctx == null || !ctx.isEditorInShared || ctx.ledgerSyncId == null) {
       return visible;
     }

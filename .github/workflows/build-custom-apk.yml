@@ -12,10 +12,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 固定签名的来源：GitHub Secrets，构建时临时还原到 android/custom/（该目录已被
+      # .gitignore 忽略，仓库里没有任何私钥）。这样每次 CI 构建签名指纹恒定，可以覆盖
+      # 安装，不必每次卸载（卸载会清掉本地数据、需要重新配置云端）。
+      # 需要的 Secrets：BEECOUNT_KEYSTORE_B64 / BEECOUNT_KEYSTORE_PASSWORD /
+      #                BEECOUNT_KEY_ALIAS / BEECOUNT_KEY_PASSWORD
+      # 不再依赖 actions/cache：缓存 7 天无人读取即被清理，清理后签名会变。
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: 还原签名密钥库（来自 Secrets，不落仓库）
+        env:
+          KEYSTORE_B64: ${{ secrets.BEECOUNT_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "::error::缺少 Secrets.BEECOUNT_KEYSTORE_B64，无法得到固定签名"
+            exit 1
+          fi
+          mkdir -p android/custom
+          # 粘贴进 Secrets 的 base64 可能带换行/缩进，先剔除空白再解码，避免 base64: invalid input
+          printf '%s' "$KEYSTORE_B64" | tr -d ' \t\r\n' | base64 -d > android/custom/beecount-debug.p12
+          chmod 600 android/custom/beecount-debug.p12
+          test -s android/custom/beecount-debug.p12 || { echo "::error::密钥库还原为空"; exit 1; }
+
+      # 早失败：构建前先确认密钥库能读、别名对、指纹稳定，避免跑 7 分钟才发现签名问题。
+      - name: 校验签名密钥库
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.BEECOUNT_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.BEECOUNT_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_PASSWORD:-}" ] || [ -z "${KEY_ALIAS:-}" ]; then
+            echo "::error::缺少 Secrets.BEECOUNT_KEYSTORE_PASSWORD 或 BEECOUNT_KEY_ALIAS"
+            exit 1
+          fi
+          keytool -list -v \
+            -keystore android/custom/beecount-debug.p12 \
+            -storetype PKCS12 \
+            -storepass "$KEYSTORE_PASSWORD" | tee /tmp/ks.txt
+          grep -q "$KEY_ALIAS" /tmp/ks.txt || { echo "::error::别名不符"; exit 1; }
 
       - uses: subosito/flutter-action@v2
         with:
@@ -29,14 +67,51 @@ jobs:
       - name: 重新生成 Drift/JsonSerializable 代码
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: 构建可安装的 debug APK（使用 Flutter debug 签名）
-        run: flutter build apk --debug --flavor prod
+      - name: 构建可安装的 debug APK（dev 风味，仅 arm64-v8a 单包）
+        # 注意：项目 Gradle 故意过滤掉 prodDebug 变体，不能用 --flavor prod --debug。
+        # dev debug 包名为 com.tntlikely.beecount.dev.debug，可与官方版同时安装。
+        # BEECOUNT_APK_ABI=arm64-v8a 关闭 splits，只产一个包；
+        # 覆盖小米 / 红米近年全部 64 位机型，不打包 armeabi-v7a / x86_64 / universal。
+        env:
+          BEECOUNT_KEYSTORE_PATH: custom/beecount-debug.p12
+          BEECOUNT_KEYSTORE_PASSWORD: ${{ secrets.BEECOUNT_KEYSTORE_PASSWORD }}
+          BEECOUNT_KEY_ALIAS: ${{ secrets.BEECOUNT_KEY_ALIAS }}
+          BEECOUNT_KEY_PASSWORD: ${{ secrets.BEECOUNT_KEY_PASSWORD }}
+        run: BEECOUNT_APK_ABI=arm64-v8a flutter build apk --debug --flavor dev
 
-      - name: 上传 APK
+      # 断言产物签名指纹：与密钥库证书指纹不一致就失败。
+      # 指纹不符意味着这个包装不到上一个版本上（安卓会报签名不一致），
+      # 与其让你装完才发现，不如让构建直接挂掉。指纹取自密钥库证书的 SHA-256。
+      - name: 断言 APK 签名指纹（不一致即失败）
+        run: |
+          set -euo pipefail
+          EXPECTED=2e7eedd8565b1b7d0b4f46e9341a70d2f2a069748014b139fcba346062645915
+          APK=build/app/outputs/flutter-apk/app-dev-debug.apk
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$APKSIGNER" ]; then
+            ACTUAL=$("$APKSIGNER" verify --print-certs "$APK" \
+              | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr -d ':' | tr 'A-Z' 'a-z')
+          else
+            echo "未找到 apksigner，改用 keytool 读 APK 内证书"
+            ACTUAL=$(keytool -printcert -jarfile "$APK" \
+              | grep -iE "^[[:space:]]*SHA256:" | head -1 | awk '{print $2}' | tr -d ':' | tr 'A-Z' 'a-z')
+          fi
+          echo "expected=$EXPECTED"
+          echo "actual  =$ACTUAL"
+          [ -n "$ACTUAL" ] || { echo "::error::无法解析 APK 签名指纹"; exit 1; }
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::APK 签名指纹不符，此包无法覆盖安装旧版"
+            exit 1
+          fi
+
+      - name: 上传 APK（唯一产物）
         uses: actions/upload-artifact@v4
         with:
           name: beecount-custom-apk
-          path: |
-            build/app/outputs/apk/prod/debug/*.apk
-            build/app/outputs/flutter-apk/app-prod-debug.apk
+          path: build/app/outputs/flutter-apk/app-dev-debug.apk
           if-no-files-found: error
+
+      # Runner 是一次性的，但仍显式抹掉还原出来的密钥库，避免落在可下载的 workspace 缓存里。
+      - name: 清理临时密钥库
+        if: always()
+        run: rm -f android/custom/beecount-debug.p12 android/custom/keystore.properties

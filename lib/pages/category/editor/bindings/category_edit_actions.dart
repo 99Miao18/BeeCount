@@ -67,7 +67,10 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     if (name.isEmpty || _busy) return;
     try {
       final result = await ref.read(repositoryProvider).isCategoryNameDuplicate(
-          name: name, kind: widget.kind, excludeId: widget.category?.id);
+          name: name,
+          kind: widget.kind,
+          excludeId: widget.category?.id,
+          ledgerId: ref.read(currentLedgerIdProvider));
       if (mounted && name == _nameController.text.trim()) {
         setState(() => _duplicate = result);
       }

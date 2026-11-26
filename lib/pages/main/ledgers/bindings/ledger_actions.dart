@@ -701,11 +701,11 @@ mixin _LedgerActions on ConsumerState<LedgersPageNew> {
         return id;
       });
 
-      // 定制：新建账本时选择要继承的默认分类（只列出通用分类）。
-      if (!mounted) return;
-      final inherited = await _pickInheritCategories(context);
-      if (inherited.isNotEmpty) {
-        await repo.inheritCategoriesForLedger(newLedgerId, inherited);
+      // 定制：选了内置模板时，把该模板的全部分类复制成新账本的独立副本。
+      // 选「自定义（空白账本）」则不建任何分类。
+      final template = result.template;
+      if (template != null) {
+        await applyPresetLedgerTemplate(repo, newLedgerId, template);
         ref.invalidate(categoriesWithCountProvider);
       }
 
@@ -739,76 +739,25 @@ mixin _LedgerActions on ConsumerState<LedgersPageNew> {
     }
   }
 
-  /// 定制：新建账本后弹出多选对话框，勾选要继承的通用分类。
-  /// 勾选一级分类时自动带上它的二级分类；返回去重后的分类 id 列表。
-  Future<List<int>> _pickInheritCategories(BuildContext context) async {
-    final all = await ref.read(repositoryProvider).getAllCategories();
-    final candidates = all.where((c) => c.ledgerId == null).toList();
-    if (candidates.isEmpty || !mounted) return const <int>[];
-
-    final selected = <int>{};
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (buildContext, setState) => AlertDialog(
-          title: const Text('继承默认分类'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 360,
-            child: ListView(
-              children: [
-                for (final c in candidates)
-                  CheckboxListTile(
-                    value: selected.contains(c.id),
-                    title: Text(c.name),
-                    subtitle: Text(c.kind == 'income' ? '收入' : '支出'),
-                    onChanged: (v) => setState(() {
-                      if (v == true) {
-                        selected.add(c.id);
-                      } else {
-                        selected.remove(c.id);
-                      }
-                    }),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('跳过'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true) return const <int>[];
-    final ids = selected.toSet();
-    for (final c in candidates) {
-      if (c.parentId != null && ids.contains(c.parentId)) ids.add(c.id);
-    }
-    return ids.toList();
-  }
-
-  Future<({String name, String currency, int monthStartDay})?>
+  Future<({String name, String currency, int monthStartDay,
+      LedgerTemplate? template})?>
       _showLedgerEditorDialog(BuildContext _,
           {String? title,
           String? initialName,
           String? initialCurrency,
           int? initialMonthStartDay}) {
     FocusManager.instance.primaryFocus?.unfocus();
-    return showDialog<({String name, String currency, int monthStartDay})>(
+    final isCreate = title == AppLocalizations.of(context).ledgersNew;
+    return showDialog<({String name, String currency, int monthStartDay,
+        LedgerTemplate? template})>(
         context: context,
         barrierColor: Colors.black.withValues(alpha: .26),
         builder: (_) => _LedgerEditorDialog(
             title: title,
             name: initialName ?? '',
             currency: initialCurrency ?? 'CNY',
-            day: initialMonthStartDay ?? 1));
+            day: initialMonthStartDay ?? 1,
+            showTemplate: isCreate));
   }
 
   /// 显示冲突解决对话框
@@ -1071,10 +1020,12 @@ class _LedgerEditorDialog extends StatefulWidget {
       {this.title,
       required this.name,
       required this.currency,
-      required this.day});
+      required this.day,
+      this.showTemplate = false});
   final String? title;
   final String name, currency;
   final int day;
+  final bool showTemplate;
   @override
   State<_LedgerEditorDialog> createState() => _LedgerEditorDialogState();
 }
@@ -1083,6 +1034,15 @@ class _LedgerEditorDialogState extends State<_LedgerEditorDialog> {
   late final controller = TextEditingController(text: widget.name);
   late String currency = widget.currency;
   late int day = widget.day;
+  String _templateKey = 'custom';
+
+  LedgerTemplate? get _selectedTemplate {
+    for (final template in presetLedgerTemplates) {
+      if (template.key == _templateKey) return template;
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     controller.dispose();
@@ -1092,34 +1052,61 @@ class _LedgerEditorDialogState extends State<_LedgerEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final form = BeeLedgerEditorForm(
+        nameController: controller,
+        nameLabel: l.ledgersName,
+        currencyLabel: l.ledgerBaseCurrencyLabel,
+        currency: displayCurrency(currency, context),
+        periodLabel: l.ledgersMonthStartDay,
+        period: day == 1
+            ? l.ledgersMonthStartDayNatural
+            : l.ledgersMonthStartDayValue(day),
+        onCurrency: () async {
+          final code = await showCurrencyPickerSheet(context,
+              selected: currency,
+              primaryColor: Theme.of(context).colorScheme.primary,
+              title: l.ledgersSelectCurrency);
+          if (mounted && code != null) setState(() => currency = code);
+        },
+        onPeriod: () async {
+          final selected = await showBeeSheet<int>(context,
+              title: l.ledgersMonthStartDay,
+              child: SingleChildScrollView(
+                  child: BeeMonthStartDayGrid(
+                      value: day,
+                      hint: l.ledgersMonthStartDayHint,
+                      onSelected: (day) => Navigator.pop(context, day))));
+          if (mounted && selected != null) setState(() => day = selected);
+        });
+
     return BeeDialog(
         title: Text(widget.title ?? l.ledgersEdit),
-        content: BeeLedgerEditorForm(
-            nameController: controller,
-            nameLabel: l.ledgersName,
-            currencyLabel: l.ledgerBaseCurrencyLabel,
-            currency: displayCurrency(currency, context),
-            periodLabel: l.ledgersMonthStartDay,
-            period: day == 1
-                ? l.ledgersMonthStartDayNatural
-                : l.ledgersMonthStartDayValue(day),
-            onCurrency: () async {
-              final code = await showCurrencyPickerSheet(context,
-                  selected: currency,
-                  primaryColor: Theme.of(context).colorScheme.primary,
-                  title: l.ledgersSelectCurrency);
-              if (mounted && code != null) setState(() => currency = code);
-            },
-            onPeriod: () async {
-              final selected = await showBeeSheet<int>(context,
-                  title: l.ledgersMonthStartDay,
-                  child: SingleChildScrollView(
-                      child: BeeMonthStartDayGrid(
-                          value: day,
-                          hint: l.ledgersMonthStartDayHint,
-                          onSelected: (day) => Navigator.pop(context, day))));
-              if (mounted && selected != null) setState(() => day = selected);
-            }),
+        content: widget.showTemplate
+            ? Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<String>(
+                  value: _templateKey,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: '内置模板'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                        value: 'custom', child: Text('自定义（空白账本）')),
+                    for (final template in presetLedgerTemplates)
+                      DropdownMenuItem<String>(
+                          value: template.key, child: Text(template.name)),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _templateKey = value;
+                      final template = _selectedTemplate;
+                      if (template != null) controller.text = template.name;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                form,
+              ])
+            : form,
         actions: [
           BeeButton(
               label: l.commonCancel,
@@ -1136,7 +1123,10 @@ class _LedgerEditorDialogState extends State<_LedgerEditorDialog> {
                       : () => Navigator.pop(context, (
                             name: value.text.trim(),
                             currency: currency,
-                            monthStartDay: day
+                            monthStartDay: day,
+                            template: widget.showTemplate
+                                ? _selectedTemplate
+                                : null
                           ))))
         ]);
   }

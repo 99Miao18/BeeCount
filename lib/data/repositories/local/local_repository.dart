@@ -127,8 +127,16 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<int> createLedger({required String name, String currency = 'CNY'}) =>
-      _ledgerRepo.createLedger(name: name, currency: currency);
+  Future<int> createLedger({
+    required String name,
+    String currency = 'CNY',
+    String? syncId,
+  }) =>
+      _ledgerRepo.createLedger(
+        name: name,
+        currency: currency,
+        syncId: syncId,
+      );
 
   @override
   Future<void> updateLedgerName({required int id, required String name}) =>
@@ -2002,6 +2010,7 @@ class LocalRepository extends BaseRepository {
       final transactionType = difference > 0 ? 'income' : 'expense';
       final categoryId = await _ensureBalanceSettlementCategory(
         transactionType,
+        ledgerId,
       );
       final transactionId = await addTransaction(
         ledgerId: ledgerId,
@@ -2032,17 +2041,19 @@ class LocalRepository extends BaseRepository {
     );
   }
 
-  Future<int> _ensureBalanceSettlementCategory(String kind) async {
+  Future<int> _ensureBalanceSettlementCategory(String kind, int ledgerId) async {
     final existing = (await getAllCategories()).where(
       (category) =>
           category.name == _balanceSettlementCategoryName &&
-          category.kind == kind,
+          category.kind == kind &&
+          category.ledgerId == ledgerId,
     );
     final category = existing.isEmpty ? null : existing.first;
     if (category != null) return category.id;
     return createCategory(
       name: _balanceSettlementCategoryName,
       kind: kind,
+      ledgerId: ledgerId,
     );
   }
 

@@ -25,6 +25,41 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// 定制版固定签名密钥库：只存在于本机与 GitHub Secrets，绝不进仓库。
+// android/.gitignore 已整体忽略 custom/ 目录，避免密钥库被误提交。
+// 凭据读取顺序：环境变量 > android/custom/keystore.properties
+//   BEECOUNT_KEYSTORE_PATH      密钥库路径（默认 custom/beecount-debug.p12）
+//   BEECOUNT_KEYSTORE_PASSWORD  密钥库口令
+//   BEECOUNT_KEY_ALIAS          密钥别名
+//   BEECOUNT_KEY_PASSWORD       密钥口令
+// 四项不全则不绑定 custom 签名，回退 AGP 默认调试密钥并打印 WARNING（本地 clone
+// 后不改配置也能直接跑）。CI 侧由「断言 APK 签名指纹」兜底：指纹不符直接失败，
+// 不会静默产出装不上的包。
+def customSigningProps = new Properties()
+def customSigningPropsFile = new File(rootProject.projectDir, 'custom/keystore.properties')
+if (customSigningPropsFile.exists()) {
+    customSigningPropsFile.withInputStream { customSigningProps.load(it) }
+}
+def customKeystoreFile = rootProject.file(
+        System.getenv('BEECOUNT_KEYSTORE_PATH')
+                ?: customSigningProps.getProperty('storeFile')
+                ?: 'custom/beecount-debug.p12')
+def customStorePassword = System.getenv('BEECOUNT_KEYSTORE_PASSWORD') ?: customSigningProps.getProperty('storePassword')
+def customKeyAlias = System.getenv('BEECOUNT_KEY_ALIAS') ?: customSigningProps.getProperty('keyAlias')
+def customKeyPassword = System.getenv('BEECOUNT_KEY_PASSWORD') ?: customSigningProps.getProperty('keyPassword')
+def customSigningReady = customKeystoreFile.exists() &&
+        customStorePassword && customKeyAlias && customKeyPassword
+if (!customSigningReady) {
+    project.logger.warn("""
+[签名] 未就绪：缺少定制密钥库或口令，本次 debug 包将使用默认调试密钥。
+       后果是签名可能与已装版本不一致，安卓拒绝覆盖安装（需卸载，本地数据会丢）。
+       本机修复：把 beecount-debug.p12 放到 android/custom/，并在
+                 android/custom/keystore.properties 写入 storeFile/storePassword/keyAlias/keyPassword。
+       CI 修复：配置仓库 Secrets BEECOUNT_KEYSTORE_B64 / BEECOUNT_KEYSTORE_PASSWORD /
+               BEECOUNT_KEY_ALIAS / BEECOUNT_KEY_PASSWORD，工作流会自动还原密钥库。
+""".stripIndent())
+}
+
 android {
     namespace = "com.tntlikely.beecount"
     compileSdk = 36
@@ -104,6 +139,20 @@ android {
     }
 
     signingConfigs {
+        // 定制版固定签名（自用，非上架）。
+        // 密钥库与口令来自环境变量或 android/custom/keystore.properties，两者都不进仓库。
+        // 每次构建用同一把密钥，签名指纹恒定，后续版本可直接覆盖安装，本地数据与云端
+        // 配置都不会丢。这正是 buildTypes.debug 要显式绑定它的原因：不绑定时 AGP 会用
+        // ~/.android/debug.keystore，干净 CI 每次现场生成，签名必变。
+        custom {
+            if (customSigningReady) {
+                storeFile customKeystoreFile
+                storeType 'PKCS12'
+                storePassword customStorePassword
+                keyAlias customKeyAlias
+                keyPassword customKeyPassword
+            }
+        }
         release {
             if (keystoreProperties['storeFile']) {
                 storeFile file(keystoreProperties['storeFile'])
@@ -164,6 +213,11 @@ android {
 
     buildTypes {
         debug {
+            // 定制：密钥库就绪时绑定固定签名。不绑定的话 AGP 会用 ~/.android/debug.keystore，
+            // 干净 CI 每次现场生成，签名随之改变，安卓会拒绝覆盖安装。
+            if (customSigningReady) {
+                signingConfig = signingConfigs.custom
+            }
             // Debug 构建追加独立后缀，名称显示为测试版，便于与生产包共存
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"

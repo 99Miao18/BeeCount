@@ -32,7 +32,6 @@ import 'services/platform/app_link_service.dart';
 import 'services/platform/quick_actions_service.dart';
 import 'services/billing/post_processor.dart';
 import 'services/data/recurring_transaction_service.dart';
-import 'services/data/preset_ledger_seed.dart';
 import 'services/system/logger_service.dart';
 import 'services/security/app_lock_service.dart';
 import 'providers/security_providers.dart';
@@ -138,8 +137,6 @@ class _BeeAppState extends ConsumerState<BeeApp>
       if (ref.read(isAppLockedProvider)) return;
       final nav = Navigator.of(context, rootNavigator: true);
       if (nav.canPop()) return;
-      // 定制：首次启动内置三套账本分类（只补缺失，不动已有数据）。
-      unawaited(seedPresetLedgers(ref));
       // 定制：切到记账 tab，而不是 push 一个没有底部栏的独立页面。
       ref.read(bottomTabIndexProvider.notifier).state = 4;
     });
