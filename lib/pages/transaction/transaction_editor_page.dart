@@ -216,7 +216,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                   ],
                   selectedIndex: _selectedType,
                   backLabel: l10n.commonBack,
-                  showBackButton: !embedded,
+                  showBackButton: !widget.embedded,
                   onBack: () => Navigator.maybePop(context),
                   moreLabel: l10n.txFlagMoreOptions,
                   onMore: kind == 'transfer'
