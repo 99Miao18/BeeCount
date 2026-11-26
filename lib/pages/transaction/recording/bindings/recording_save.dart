@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' as d;
 import 'package:flutter/foundation.dart' show ValueChanged;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,8 +76,10 @@ Future<void> persistRecordingDraft(
     );
     transactionId = editingId;
     // 共享账本:本地 lastEditedByUserId 立即回填,UI 头像组直接展示
-    // 当前 user 为编辑人(否则要等 server 下次 pull 才回来)
-    await TxAuthorService.markEdited(ref, transactionId);
+    // 当前 user 为编辑人(否则要等 server 下次 pull 才回来)。
+    // 定制: 不 await —— 这一步要取云端 token,网络卡住会把「保存」按钮
+    // 一直转圈(交易其实已经写进本地库)。改后台执行,内部另有超时兜底。
+    unawaited(TxAuthorService.markEdited(ref, transactionId));
   } else {
     transactionId = await repo.addTransaction(
       ledgerId: ledgerId,
@@ -93,13 +97,14 @@ Future<void> persistRecordingDraft(
       nativeAmount: res.nativeAmount,
     );
     onCreated(transactionId);
-    // 共享账本:新建本地 tx 也回填创建人 + 编辑人(同一个 user)
-    await TxAuthorService.markCreated(ref, transactionId);
+    // 共享账本:新建本地 tx 也回填创建人 + 编辑人(同一个 user)。
+    // 定制: 同样不 await,避免保存流程阻塞在云端请求上(见上)。
+    unawaited(TxAuthorService.markCreated(ref, transactionId));
   }
   await _persistRecordingMetadata(ref,
       transactionId: transactionId, result: res, editing: editingId != null);
   // 统一处理：自动/手动同步与状态刷新（后台静默）
-  PostProcessor.sync(ref, ledgerId: ledgerId);
+  unawaited(PostProcessor.sync(ref, ledgerId: ledgerId));
   // 刷新：账本笔数与全局统计
   ref.invalidate(countsForLedgerProvider(ledgerId));
   ref.read(statsRefreshProvider.notifier).state++;
@@ -187,7 +192,8 @@ Future<void> persistTransferDraft(
   }
   await _persistRecordingMetadata(ref,
       transactionId: transactionId, result: result, editing: editingId != null);
-  await PostProcessor.sync(ref, ledgerId: ledgerId);
+  // 定制: 同步不阻塞保存按钮(同上,网络慢时会让保存一直转圈)。
+  unawaited(PostProcessor.sync(ref, ledgerId: ledgerId));
   ref.invalidate(countsForLedgerProvider(ledgerId));
   ref.read(statsRefreshProvider.notifier).state++;
 }

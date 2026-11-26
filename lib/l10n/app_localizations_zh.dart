@@ -8764,7 +8764,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get v4RecordingCalculationHint => '支持 + − × ÷ 四则运算';
 
   @override
-  String get v4RecordingSaveNext => '再记一笔';
+  String get v4RecordingSaveNext => '保存并再记一笔';
 
   @override
   String get v4RecordingClearAmount => '清空金额';
@@ -18458,7 +18458,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get v4RecordingCalculationHint => '支援 + − × ÷ 四則運算';
 
   @override
-  String get v4RecordingSaveNext => '再記一筆';
+  String get v4RecordingSaveNext => '儲存並再記一筆';
 
   @override
   String get v4RecordingClearAmount => '清空金額';

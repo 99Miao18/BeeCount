@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 
@@ -100,7 +102,7 @@ class RecordingActions extends StatelessWidget {
     Widget action(String key, Widget child, VoidCallback? callback,
             {Color? background, Color? foreground}) =>
         SizedBox(
-            height: 44,
+            height: 46,
             child: FilledButton(
                 key: ValueKey(key),
                 onPressed: callback,
@@ -116,52 +118,67 @@ class RecordingActions extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12))),
                 child: child));
-    return Row(children: [
-      if (showSaveNext) ...[
-        Expanded(
-            flex: 100,
-            child: action(
-                'recording-save-next',
-                Text(saveNextLabel ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12)),
-                onSaveNext)),
-        const SizedBox(width: 6)
-      ],
-      Expanded(
-          flex: 75,
-          child: action('recording-equals',
-              const Text('=', style: TextStyle(fontSize: 23)), onEquals,
-              background: Color.alphaBlend(
-                  theme.colorScheme.primary.withValues(alpha: .12),
-                  colors.surface),
-              foreground: Color.lerp(theme.colorScheme.primary,
-                  theme.colorScheme.onSurface, .42))),
-      const SizedBox(width: 6),
-      Expanded(
-          flex: 160,
-          child: action(
-              'recording-save',
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                if (saving)
-                  const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                else
-                  const BeeLineIcon('Check', size: 17),
-                const SizedBox(width: 5),
-                Flexible(
-                    child: Text(saveLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500)))
-              ]),
-              onSave,
-              background: theme.colorScheme.primary,
-              foreground: theme.colorScheme.onPrimary))
-    ]);
+    // 定制：按钮顺序改为「保存并再记一笔 / 保存 / =」，等号移到最右侧，
+    // 宽度按键盘 4 列算出来，和上方 ÷ × − + 那一列对齐成同一尺寸。
+    return LayoutBuilder(builder: (context, constraints) {
+      const gap = 6.0;
+      const keypadGap = 5.0;
+      final keyWidth =
+          math.max(48.0, (constraints.maxWidth - 3 * keypadGap) / 4);
+      return SizedBox(
+          height: 46,
+          child: Row(children: [
+            if (showSaveNext) ...[
+              Expanded(
+                  flex: 3,
+                  child: action(
+                      'recording-save-next',
+                      Text(saveNextLabel ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)),
+                      onSaveNext)),
+              const SizedBox(width: gap)
+            ],
+            Expanded(
+                flex: 3,
+                child: action(
+                    'recording-save',
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (saving)
+                        const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                      else
+                        const BeeLineIcon('Check', size: 17),
+                      const SizedBox(width: 5),
+                      Flexible(
+                          child: Text(saveLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500)))
+                    ]),
+                    onSave,
+                    background: theme.colorScheme.primary,
+                    foreground: theme.colorScheme.onPrimary)),
+            const SizedBox(width: gap),
+            SizedBox(
+                width: keyWidth,
+                child: action(
+                    'recording-equals',
+                    const Text('=', style: TextStyle(fontSize: 23)),
+                    onEquals,
+                    background: Color.alphaBlend(
+                        theme.colorScheme.primary.withValues(alpha: .12),
+                        colors.surface),
+                    foreground: Color.lerp(
+                        theme.colorScheme.primary,
+                        theme.colorScheme.onSurface,
+                        .42))),
+          ]));
+    });
   }
 }
 

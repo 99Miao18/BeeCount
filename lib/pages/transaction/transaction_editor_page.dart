@@ -411,6 +411,18 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     });
   }
 
+  /// 保存完成后清空本次草稿，下一次记账从空白开始。
+  void _resetCardDraft() {
+    setState(() {
+      _cardEditorKey = GlobalKey<AmountEditorSheetState>();
+      _cardReset = true;
+      _cardCategory = null;
+      _cardDirty = false;
+      _retryTransactionId = null;
+      _cardInitialDate = DateTime.now();
+    });
+  }
+
   Future<void> _saveTransaction(
     Category c,
     String kind,
@@ -429,25 +441,21 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       updateAppWidget(ref, context);
     }
     _retryTransactionId = null;
-    if (res.continueAdding && mounted) {
-      setState(() {
-        _cardEditorKey = GlobalKey<AmountEditorSheetState>();
-        _cardReset = true;
-        _cardCategory = null;
-        _cardDirty = false;
-        _retryTransactionId = null;
-        _cardInitialDate = DateTime.now();
-      });
-    }
-    if (!res.continueAdding && mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-    if (res.continueAdding && mounted) {
+    if (!mounted) return;
+    if (res.continueAdding) {
+      _resetCardDraft();
       showBeeToast(
         context,
         AppLocalizations.of(context).transactionSavedNextCategory,
         tone: BeeTone.success,
       );
+    } else if (widget.embedded) {
+      // 内嵌在底部 tab 时没有可 pop 的路由：清空草稿，切回「明细」tab，
+      // 让用户立刻看到刚记的那一笔（需求：保存后回明细）。
+      _resetCardDraft();
+      ref.read(bottomTabIndexProvider.notifier).state = 0;
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
     // 反馈：轻微触感 + 系统点击音
     HapticFeedback.lightImpact();

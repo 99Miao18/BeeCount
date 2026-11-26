@@ -98,11 +98,6 @@ class RecordingCategorySection extends ConsumerStatefulWidget {
 
 class _RecordingCategorySectionState
     extends ConsumerState<RecordingCategorySection> {
-  int? _expandedId;
-  bool _hasExpansionOverride = false;
-  final _childScroll = ScrollController();
-  final _selectedChildAnchor = GlobalKey();
-  int? _revealedParent, _revealedChild;
   bool _fallbackPending = false;
   VoidCallback? _detailsAction;
 
@@ -121,38 +116,6 @@ class _RecordingCategorySectionState
     });
   }
 
-  @override
-  void dispose() {
-    _childScroll.dispose();
-    super.dispose();
-  }
-
-  void _revealChild(int parentId) {
-    if (_revealedParent == parentId && _revealedChild == widget.selectedId) {
-      return;
-    }
-    _revealedParent = parentId;
-    _revealedChild = widget.selectedId;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final target = _selectedChildAnchor.currentContext;
-      if (target == null) return;
-      unawaited(Scrollable.ensureVisible(target,
-          duration: const Duration(milliseconds: 180),
-          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd));
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant RecordingCategorySection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.kind != widget.kind ||
-        oldWidget.ledgerId != widget.ledgerId) {
-      _expandedId = null;
-      _hasExpansionOverride = false;
-    }
-  }
-
   Future<void> _manage({bool create = false}) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => create
@@ -165,7 +128,7 @@ class _RecordingCategorySectionState
     }
   }
 
-  Future<void> _more({int? initialParent}) async {
+  Future<void> _more() async {
     final l10n = AppLocalizations.of(context);
     final query = (ledgerId: widget.ledgerId, kind: widget.kind);
     final result = await showBeeSheet<Category>(
@@ -211,7 +174,7 @@ class _RecordingCategorySectionState
                                       .map((c) => choice(c, withChildren: true))
                                       .toList(),
                                   selected: widget.selectedId?.toString(),
-                                  initialParent: initialParent?.toString(),
+                                  immediate: true,
                                   searchLabel: l10n.searchCategoryHint,
                                   emptyLabel: l10n.categoryEmpty,
                                   confirmLabel: l10n.commonConfirm,
@@ -228,14 +191,71 @@ class _RecordingCategorySectionState
                       }))),
     );
     if (result != null && mounted) {
-      setState(() {
-        _expandedId = result.parentId;
-        _hasExpansionOverride = true;
-      });
       widget.onSelected(result);
     }
   }
 
+  /// 需求 2：点有二级的父分类 → 弹出该父分类下的二级列表；
+  /// 点中任一二级立即回传并关闭，不需要再点「确认」。
+  ///
+  /// 弹层里不列「父分类本身」：有二级的分类必须落到二级，否则同一笔支出
+  /// 会在一级、二级两种口径下混记，年度统计对不上。
+  Future<void> _openChildren(Category parent, List<Category> children) async {
+    final height = _childrenSheetHeight(context, children.length);
+    final picked = await showBeeSheet<Category>(
+      context,
+      title: CategoryUtils.getDisplayName(parent.name, context),
+      child: Builder(builder: (sheetContext) {
+        return SizedBox(
+          height: height,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: RecordingSubcategoryGrid(
+              items: children
+                  .map((category) => BeeCategoryChoice(
+                        id: category.id.toString(),
+                        label: CategoryUtils.getDisplayName(
+                            category.name, context),
+                        enabled: true,
+                        icon: RecordingCategoryIcon(
+                          category: category,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ))
+                  .toList(),
+              selected: widget.selectedId?.toString(),
+              onSelected: (id) {
+                Navigator.of(sheetContext)
+                    .pop(children.firstWhere((c) => c.id.toString() == id));
+              },
+            ),
+          ),
+        );
+      }),
+    );
+    if (picked != null && mounted) {
+      widget.onSelected(picked);
+    }
+  }
+
+  /// 二级弹层的目标高度：按 4 个一行估算行数，夹在 140 与屏高 60% 之间。
+  double _childrenSheetHeight(BuildContext context, int count) {
+    final rows = (count / 4).ceil().clamp(1, 6);
+    final natural = rows * RecordingSubcategoryGrid.minimumItemHeight +
+        (rows - 1) * RecordingSubcategoryGrid.spacing +
+        20;
+    final maxHeight = MediaQuery.sizeOf(context).height * .6;
+    return natural.clamp(140.0, maxHeight).toDouble();
+  }
+
+  /// 记账页分类区：固定「4 列 × 2 排」，第 8 格恒为「更多」。
+  ///
+  /// 定制（需求 1 + 2）：
+  /// - 目标两排，方块尺寸沿用 [RecordingCategoryTile] 的原有高度，不缩放；
+  /// - 高度连一排都放不下时（小屏 / 超大系统字号）退化成「一排 + 更多」；
+  /// - 上游把二级分类内嵌成可滚动面板，展开时会把第二排挤掉，本定制改为
+  ///   点父分类弹出二级弹层（[_openChildren]），分类区高度因此只归父分类用。
   Widget _categoryGrid(
     BuildContext context,
     BoxConstraints box,
@@ -245,14 +265,9 @@ class _RecordingCategorySectionState
   ) {
     const denseColumns = 5;
     const horizontalPadding = 13.0;
-    const childPadding = 8.0;
-    const childGap = 6.0;
-    const childChrome = 2 * (childGap + childPadding);
     final l10n = AppLocalizations.of(context);
     final selected = all.where((c) => c.id == widget.selectedId).firstOrNull;
     final activeParent = selected?.parentId ?? selected?.id;
-    final expandedId = _hasExpansionOverride ? _expandedId : selected?.parentId;
-    final expandedParent = parents.where((c) => c.id == expandedId).firstOrNull;
     final childrenByParent = <int, List<Category>>{};
     for (final category in all) {
       final parentId = category.parentId;
@@ -262,19 +277,6 @@ class _RecordingCategorySectionState
     }
     String label(Category category) =>
         CategoryUtils.getDisplayName(category.name, context);
-    final children = childrenByParent[expandedParent?.id] ?? const [];
-    final childChoices = children
-        .map((category) => BeeCategoryChoice(
-              id: category.id.toString(),
-              label: label(category),
-              enabled: !childrenByParent.containsKey(category.id),
-              icon: RecordingCategoryIcon(
-                category: category,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ))
-        .toList();
     final verticalPadding = narrow ? 2.0 : 10.0;
     final width = math.max(0.0, box.maxWidth - 2 * horizontalPadding);
     final useFiveColumns = widget.preferredColumns == denseColumns &&
@@ -298,6 +300,7 @@ class _RecordingCategorySectionState
     }
     rowHeight = rowHeight.ceilToDouble();
 
+    // 连一排都放不下：把入口缩到明细行右侧。
     if (bound && height < rowHeight) {
       final inDetails = box.maxHeight < RecordingMoreCategoriesButton.height;
       _placeMoreInDetails(inDetails);
@@ -314,107 +317,43 @@ class _RecordingCategorySectionState
     }
     _placeMoreInDetails(false);
 
-    final childRoom = height - rowHeight - childChrome;
-    final canExpand =
-        !bound || childRoom >= RecordingSubcategoryGrid.minimumItemHeight;
-    final showChildren = canExpand && childChoices.isNotEmpty;
-    final childHeight = !showChildren || !bound
-        ? 0.0
-        : math.min(
-            math.min(154.0, childRoom),
-            RecordingSubcategoryGrid.recordingHeightFor(
-                    context,
-                    childChoices,
-                    math.max(0.0, width - 2 * childPadding),
-                    widget.selectedId?.toString())
-                .ceilToDouble(),
-          );
-    final capacity = bound
-        ? columns *
-                math
-                    .max(
-                        1,
-                        ((height -
-                                    (showChildren
-                                        ? childChrome + childHeight
-                                        : 0)) /
-                                rowHeight)
-                            .floor())
-                    .toInt() -
-            1
-        : parents.length;
+    // 目标两排；只够一排时退一排（不压缩键盘行高，避免影响点按）。
+    const targetRows = 2;
+    final rows = bound && height < rowHeight * targetRows ? 1 : targetRows;
+    final slots = columns * rows;
+    final capacity = widget.showAll ? parents.length : math.max(1, slots - 1);
+
     final visible = parents.take(capacity).toList();
-    final keep = {activeParent, if (showChildren) expandedParent?.id};
-    for (final parent in parents.where((c) => keep.contains(c.id))) {
-      if (visible.contains(parent)) continue;
-      final index = visible.lastIndexWhere((c) => !keep.contains(c.id));
-      if (index >= 0) visible[index] = parent;
+    if (activeParent != null && !visible.any((c) => c.id == activeParent)) {
+      final target =
+          parents.where((c) => c.id == activeParent).firstOrNull;
+      final index = visible.lastIndexWhere((c) => c.id != activeParent);
+      if (target != null && index >= 0) visible[index] = target;
     }
 
     Widget tile(Category category) {
-      final selected = activeParent == category.id;
-      final hasChildren = childrenByParent.containsKey(category.id);
+      final isSelected = activeParent == category.id;
+      final children = childrenByParent[category.id] ?? const <Category>[];
       return RecordingCategoryTile(
         compact: narrow,
         key: ValueKey('recording-category-${category.id}'),
         label: label(category),
-        selected: selected,
-        hasChildren: hasChildren,
-        expanded: showChildren && expandedParent?.id == category.id,
+        selected: isSelected,
+        hasChildren: children.isNotEmpty,
         icon: RecordingCategoryIcon(
           category: category,
           size: 18,
-          color: selected
+          color: isSelected
               ? Theme.of(context).colorScheme.onPrimary
               : Theme.of(context).colorScheme.onSurface,
         ),
         onTap: () {
-          if (!hasChildren) {
+          if (children.isEmpty) {
             widget.onSelected(category);
-          } else if (!canExpand) {
-            unawaited(_more(initialParent: category.id));
           } else {
-            setState(() {
-              _expandedId = expandedId == category.id ? null : category.id;
-              _hasExpansionOverride = true;
-            });
+            unawaited(_openChildren(category, children));
           }
         },
-      );
-    }
-
-    Widget childGroup() {
-      final content = RecordingSubcategoryGrid(
-        items: childChoices,
-        selected: widget.selectedId?.toString(),
-        selectedAnchorKey: _selectedChildAnchor,
-        onSelected: (id) => widget
-            .onSelected(children.firstWhere((c) => c.id.toString() == id)),
-      );
-      if (!widget.showAll) _revealChild(expandedParent!.id);
-      return Container(
-        key: const ValueKey('recording-subcategory-group'),
-        margin: const EdgeInsets.symmetric(vertical: childGap),
-        padding: const EdgeInsets.all(childPadding),
-        decoration: BoxDecoration(
-          color: BeeCardTheme.of(context).soft,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: widget.showAll
-            ? content
-            : ConstrainedBox(
-                constraints:
-                    BoxConstraints(maxHeight: bound ? childHeight : 154),
-                child: Scrollbar(
-                  controller: _childScroll,
-                  thumbVisibility: true,
-                  child: SingleChildScrollView(
-                    key: const ValueKey('recording-subcategories-scroll'),
-                    controller: _childScroll,
-                    child: content,
-                  ),
-                ),
-              ),
       );
     }
 
@@ -434,11 +373,11 @@ class _RecordingCategorySectionState
               enabled: true,
               label: l10n.v4RecordingMoreCategories,
               onTap: _more,
-              child: moreTile,
-            )
+              child: moreTile)
           : moreTile);
     }
-    final rows = <Widget>[];
+
+    final gridRows = <Widget>[];
     for (var i = 0; i < entries.length; i += columns) {
       final row = Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,22 +389,16 @@ class _RecordingCategorySectionState
                   : const SizedBox.shrink()),
         ),
       );
-      rows.add(bound ? SizedBox(height: rowHeight, child: row) : row);
-      if (showChildren &&
-          visible
-              .skip(i)
-              .take(columns)
-              .any((c) => c.id == expandedParent?.id)) {
-        rows.add(childGroup());
-      }
+      gridRows.add(SizedBox(height: rowHeight, child: row));
     }
+
     return BeeSurface(
       padding: EdgeInsets.symmetric(
           horizontal: horizontalPadding, vertical: verticalPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ...rows,
+          ...gridRows,
           if (widget.showAll)
             TextButton.icon(
               onPressed: _manage,

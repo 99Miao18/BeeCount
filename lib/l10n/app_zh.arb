@@ -3967,7 +3967,7 @@
   "v4RecordingCategoryColumnsFive": "5 个",
   "v4RecordingCategoryColumnsScope": "在本机的收支记账页生效",
   "v4RecordingCalculationHint": "支持 + − × ÷ 四则运算",
-  "v4RecordingSaveNext": "再记一笔",
+  "v4RecordingSaveNext": "保存并再记一笔",
   "v4RecordingClearAmount": "清空金额",
   "v4RecordingSelectCategory": "请选择分类",
   "v4RecordingSaveFailed": "保存失败，请重试",
