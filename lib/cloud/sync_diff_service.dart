@@ -286,8 +286,11 @@ class SyncDiffService {
     }
 
     // 分类/账户/标签:复用 DataImportService(同一份 batch 优化只在一处维护)
-    final categoryCache =
-        await dataImportService.importCategories(repo, importData.categories);
+    final categoryCache = await dataImportService.importCategories(
+      repo,
+      importData.categories,
+      ledgerId: ledgerId,
+    );
     final accountNameToId = await dataImportService.importAccounts(
       repo,
       importData.accounts,

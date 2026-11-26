@@ -449,8 +449,10 @@ extension SyncEngineApplyExt on SyncEngine {
     final parentName = payload['parentName'] as String?;
     final parentSyncId = (payload['parentSyncId'] as String?)?.trim();
     // 定制：分类归属账本。server 只透传该 key，不参与投影；App 间按 syncId 还原。
+    // 旧端发来的 payload 没有该 key：保留本地已有归属，避免同步一次就把分类
+    // 变成「无账本」而消失（新增行仍为 NULL，等带 key 的增量同步再补齐）。
     final categoryLedgerSyncId = payload['ledgerSyncId'] as String?;
-    int? categoryLedgerId;
+    int? categoryLedgerId = existing?.ledgerId;
     if (categoryLedgerSyncId != null && categoryLedgerSyncId.isNotEmpty) {
       final ownerLedger = await (db.select(db.ledgers)
             ..where((l) => l.syncId.equals(categoryLedgerSyncId)))

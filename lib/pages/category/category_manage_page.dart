@@ -14,6 +14,7 @@ import '../../data/db.dart' as db;
 import '../../services/billing/post_processor.dart';
 import '../../services/category_package_service.dart';
 import '../../services/data/seed_service.dart';
+import '../../services/data/preset_ledger_seed.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/category_utils.dart';
@@ -50,6 +51,9 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage>
     _tabController.addListener(() {
       setState(() {}); // 重新构建以更新按钮状态
     });
+    // 定制：进入分类页时补一次内置账本/分类（幂等，只补缺失）。
+    // 冷启动的 seed 可能被深链/锁屏跳过，这里兜底，确保三套账本分类一定存在。
+    unawaited(seedPresetLedgers(ref));
   }
 
   @override

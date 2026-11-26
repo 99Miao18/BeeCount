@@ -119,10 +119,8 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
   final all = await repo.getAllCategories();
-  // 定制：只显示当前账本的分类 + 通用分类。
-  return all
-      .where((c) => c.ledgerId == null || c.ledgerId == ledgerId)
-      .toList();
+  // 定制 v38：分类严格绑定账本，只显示当前账本的分类。
+  return all.where((c) => c.ledgerId == ledgerId).toList();
 });
 
 // 分类与交易笔数组合Provider（响应式版本）
@@ -132,12 +130,10 @@ final categoriesWithCountProvider = StreamProvider.autoDispose<
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
   // §7 决策 v25:Owner 资源不再 mirror 主表,管理页直接读主 Categories。
-  // 定制：再按账本归属过滤（null 的老分类视为通用分类）。
+  // 定制 v38：再按账本归属过滤，只有当前账本的分类会出现在管理页。
   return repo.watchCategoriesWithCount().map(
         (rows) => rows
-            .where((r) =>
-                r.category.ledgerId == null ||
-                r.category.ledgerId == ledgerId)
+            .where((r) => r.category.ledgerId == ledgerId)
             .toList(),
       );
 });

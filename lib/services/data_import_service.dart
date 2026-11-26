@@ -202,7 +202,11 @@ class DataImportService {
     );
 
     // 3. 导入分类
-    final categoryCache = await importCategories(repo, data.categories);
+    final categoryCache = await importCategories(
+      repo,
+      data.categories,
+      ledgerId: ledgerId,
+    );
 
     // 4. 导入标签
     final tagNameToId = await importTags(repo, data.tags);
@@ -266,8 +270,9 @@ class DataImportService {
   /// 导入分类(先一级后二级)。public — sync_diff_service 复用。
   Future<Map<String, int>> importCategories(
     BaseRepository repo,
-    List<ImportCategory> categories,
-  ) async {
+    List<ImportCategory> categories, {
+    int? ledgerId,
+  }) async {
     final categoryCache = <String, int>{}; // key: kind|name -> id
 
     if (categories.isEmpty) return categoryCache;
@@ -282,6 +287,8 @@ class DataImportService {
       final existingCategoryMap = <String, int>{};
 
       for (final cat in [...existingExpense, ...existingIncome]) {
+        // 定制 v38：分类按账本隔离，导入时只复用目标账本的分类。
+        if (ledgerId != null && cat.ledgerId != ledgerId) continue;
         existingCategoryMap['${cat.kind}|${cat.name}'] = cat.id;
         // 获取子分类
         final subCats = await repo.getSubCategories(cat.id);
@@ -305,6 +312,7 @@ class DataImportService {
             kind: cat.kind,
             icon: cat.icon,
             sortOrder: cat.sortOrder,
+            ledgerId: ledgerId,
           );
           categoryCache[key] = id;
           created++;
@@ -338,6 +346,7 @@ class DataImportService {
               kind: cat.kind,
               icon: cat.icon,
               sortOrder: cat.sortOrder,
+              ledgerId: ledgerId,
             );
             categoryCache[key] = id;
 
@@ -516,6 +525,7 @@ class DataImportService {
             categoryId = await repo.upsertCategory(
               name: tx.categoryName!,
               kind: tx.categoryKind!,
+              ledgerId: ledgerId,
             );
             localCategoryCache[key] = categoryId;
           } catch (_) {}

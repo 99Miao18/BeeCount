@@ -701,9 +701,9 @@ mixin _LedgerActions on ConsumerState<LedgersPageNew> {
         return id;
       });
 
-      // 定制：新建账本时选择要继承的默认分类（只列出通用分类）。
+      // 定制：新建账本时从已有账本复制分类，副本独立、不共享删除。
       if (!mounted) return;
-      final inherited = await _pickInheritCategories(context);
+      final inherited = await _pickInheritCategories(context, newLedgerId);
       if (inherited.isNotEmpty) {
         await repo.inheritCategoriesForLedger(newLedgerId, inherited);
         ref.invalidate(categoriesWithCountProvider);
@@ -739,57 +739,106 @@ mixin _LedgerActions on ConsumerState<LedgersPageNew> {
     }
   }
 
-  /// 定制：新建账本后弹出多选对话框，勾选要继承的通用分类。
+  /// 定制 v38：新建账本后弹出对话框，先选来源账本，再勾选要复制的分类。
+  /// 复制出的分类是独立副本（新 syncId），删除互不影响。
   /// 勾选一级分类时自动带上它的二级分类；返回去重后的分类 id 列表。
-  Future<List<int>> _pickInheritCategories(BuildContext context) async {
-    final all = await ref.read(repositoryProvider).getAllCategories();
-    final candidates = all.where((c) => c.ledgerId == null).toList();
-    if (candidates.isEmpty || !mounted) return const <int>[];
+  Future<List<int>> _pickInheritCategories(
+      BuildContext context, int newLedgerId) async {
+    final repo = ref.read(repositoryProvider);
+    final allLedgers = await repo.getAllLedgers();
+    // 刚建好的目标账本还没分类，不作为复制来源，避免用户误选后看不到分类。
+    final ledgers = allLedgers.where((l) => l.id != newLedgerId).toList();
+    if (ledgers.isEmpty || !mounted) return const <int>[];
 
+    // 默认来源：当前账本；没有则取第一个可复制账本。
+    int? sourceLedgerId;
+    final currentId = ref.read(currentLedgerIdProvider);
+    if (ledgers.any((l) => l.id == currentId)) {
+      sourceLedgerId = currentId;
+    } else {
+      sourceLedgerId = ledgers.first.id;
+    }
+
+    final allCategories = await repo.getAllCategories();
     final selected = <int>{};
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (buildContext, setState) => AlertDialog(
-          title: const Text('继承默认分类'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 360,
-            child: ListView(
-              children: [
-                for (final c in candidates)
-                  CheckboxListTile(
-                    value: selected.contains(c.id),
-                    title: Text(c.name),
-                    subtitle: Text(c.kind == 'income' ? '收入' : '支出'),
+        builder: (buildContext, setState) {
+          final candidates = allCategories
+              .where((c) => c.ledgerId == sourceLedgerId)
+              .toList();
+          return AlertDialog(
+            title: const Text('从账本复制分类'),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: Column(children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: DropdownButton<int>(
+                    value: sourceLedgerId,
+                    isExpanded: true,
+                    items: [
+                      for (final l in ledgers)
+                        DropdownMenuItem<int>(value: l.id, child: Text(l.name)),
+                    ],
                     onChanged: (v) => setState(() {
-                      if (v == true) {
-                        selected.add(c.id);
-                      } else {
-                        selected.remove(c.id);
-                      }
+                      sourceLedgerId = v;
+                      selected.clear();
                     }),
                   ),
-              ],
+                ),
+                Expanded(
+                  child: candidates.isEmpty
+                      ? const Center(child: Text('该账本暂无分类'))
+                      : ListView(
+                          children: [
+                            for (final c in candidates)
+                              CheckboxListTile(
+                                value: selected.contains(c.id),
+                                title: Text(c.name),
+                                subtitle:
+                                    Text(c.kind == 'income' ? '收入' : '支出'),
+                                onChanged: (v) => setState(() {
+                                  if (v == true) {
+                                    selected.add(c.id);
+                                  } else {
+                                    selected.remove(c.id);
+                                  }
+                                }),
+                              ),
+                          ],
+                        ),
+                ),
+              ]),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('跳过'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('跳过'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('确定'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    if (confirmed != true) return const <int>[];
+    if (confirmed != true || selected.isEmpty) return const <int>[];
+
+    final byId = {for (final c in allCategories) c.id: c};
     final ids = selected.toSet();
-    for (final c in candidates) {
-      if (c.parentId != null && ids.contains(c.parentId)) ids.add(c.id);
+    // 勾选一级分类时自动带上它的二级分类；只勾二级时按原样复制，
+    // inheritCategoriesForLedger 会把找不到父的二级作为一级落下。
+    for (final id in selected.toList()) {
+      final c = byId[id];
+      if (c == null || c.parentId != null) continue;
+      for (final child in allCategories) {
+        if (child.parentId == id) ids.add(child.id);
+      }
     }
     return ids.toList();
   }

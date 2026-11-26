@@ -289,7 +289,10 @@ class TransactionsSyncManager implements SyncService {
           accountCurrencies[account.name] = currency;
         }
       }
-      final allCategories = await repo.getAllCategories();
+      // 定制：分类按账本隔离，复用已有分类时只看目标账本，避免跨账本串类目。
+      final allCategories = (await repo.getAllCategories())
+          .where((c) => c.ledgerId == ledgerId)
+          .toList();
       final categoryIds = <String, int>{};
       final ambiguous = <String>{};
       for (final category in allCategories) {
@@ -331,7 +334,8 @@ class TransactionsSyncManager implements SyncService {
             icon: category.icon,
             sortOrder: category.sortOrder,
             level: category.level,
-            parentId: parent);
+            parentId: parent,
+            ledgerId: ledgerId);
         categoryIds[key] = id;
         if (category.iconType != null && category.iconType != 'material') {
           await repo.updateCategoryIcon(id,
@@ -408,7 +412,9 @@ class TransactionsSyncManager implements SyncService {
           categoryId = categoryIds[key];
           if (categoryId == null) {
             categoryId = await repo.createCategory(
-                name: tx.categoryName!, kind: tx.categoryKind!);
+                name: tx.categoryName!,
+                kind: tx.categoryKind!,
+                ledgerId: ledgerId);
             categoryIds[key] = categoryId;
           }
         }

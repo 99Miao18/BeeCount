@@ -609,7 +609,11 @@ class SeedService {
   }
 
   /// 生成默认分类（一级分类模式）
-  static Future<void> createFlatCategories(BeeDatabase db, AppLocalizations l10n) async {
+  static Future<void> createFlatCategories(
+    BeeDatabase db,
+    AppLocalizations l10n, {
+    int? ledgerId,
+  }) async {
     // 创建支出分类
     for (var i = 0; i < flatExpenseCategoryKeys.length; i++) {
       final key = flatExpenseCategoryKeys[i];
@@ -624,6 +628,7 @@ class SeedService {
           icon: Value(getDefaultIcon(key)),
           sortOrder: Value(i),
           level: const Value(1),
+          ledgerId: Value(ledgerId),
           syncId: Value(
               deterministicCategorySyncId(kind: 'expense', level: 1, key: key)),
         ),
@@ -644,6 +649,7 @@ class SeedService {
           icon: Value(getDefaultIcon(key)),
           sortOrder: Value(i),
           level: const Value(1),
+          ledgerId: Value(ledgerId),
           syncId: Value(
               deterministicCategorySyncId(kind: 'income', level: 1, key: key)),
         ),
@@ -657,6 +663,7 @@ class SeedService {
     required AppLocalizations l10n,
     required String kind,
     required bool hierarchical,
+    int? ledgerId,
   }) async {
     if (kind != 'expense' && kind != 'income') {
       throw ArgumentError.value(kind, 'kind', 'Expected expense or income');
@@ -702,6 +709,7 @@ class SeedService {
           icon: getDefaultIcon(key),
           sortOrder: nextTopLevelOrder++,
           syncId: syncId,
+          ledgerId: ledgerId,
         );
         final category = await repository.getCategoryById(id);
         if (category != null) {
@@ -738,6 +746,7 @@ class SeedService {
           icon: getDefaultIcon(parentKey),
           sortOrder: nextTopLevelOrder++,
           syncId: parentSyncId,
+          ledgerId: ledgerId,
         );
         parent = await repository.getCategoryById(id);
         if (parent == null) continue;
@@ -773,6 +782,7 @@ class SeedService {
           icon: getDefaultIcon(childKey),
           sortOrder: nextChildOrder++,
           syncId: childSyncId,
+          ledgerId: ledgerId,
         );
         final category = await repository.getCategoryById(id);
         if (category != null) {
@@ -786,7 +796,11 @@ class SeedService {
   }
 
   /// 生成默认分类（二级分类模式）
-  static Future<void> createHierarchicalCategories(BeeDatabase db, AppLocalizations l10n) async {
+  static Future<void> createHierarchicalCategories(
+    BeeDatabase db,
+    AppLocalizations l10n, {
+    int? ledgerId,
+  }) async {
     // 创建支出分类
     var sortOrder = 0;
     for (final entry in hierarchicalExpenseCategories.entries) {
@@ -804,6 +818,7 @@ class SeedService {
           icon: Value(getDefaultIcon(parentKey)),
           sortOrder: Value(sortOrder++),
           level: const Value(1),
+          ledgerId: Value(ledgerId),
           syncId: Value(deterministicCategorySyncId(
               kind: 'expense', level: 1, key: parentKey)),
         ),
@@ -824,6 +839,7 @@ class SeedService {
             sortOrder: Value(i),
             level: const Value(2),
             parentId: Value(parentId),
+            ledgerId: Value(ledgerId),
             syncId: Value(deterministicCategorySyncId(
                 kind: 'expense', level: 2, key: childKey)),
           ),
@@ -848,6 +864,7 @@ class SeedService {
           icon: Value(getDefaultIcon(parentKey)),
           sortOrder: Value(sortOrder++),
           level: const Value(1),
+          ledgerId: Value(ledgerId),
           syncId: Value(deterministicCategorySyncId(
               kind: 'income', level: 1, key: parentKey)),
         ),
@@ -868,6 +885,7 @@ class SeedService {
             sortOrder: Value(i),
             level: const Value(2),
             parentId: Value(parentId),
+            ledgerId: Value(ledgerId),
             syncId: Value(deterministicCategorySyncId(
                 kind: 'income', level: 2, key: childKey)),
           ),
@@ -902,20 +920,28 @@ class SeedService {
 
     // 1. 创建默认账本(可选 — 关掉之后用户进首页空状态自己新建,避免每次测试
     //    清数据都在 server 上留一个默认账本)
+    int? seedLedgerId;
     if (createDefaultLedger) {
-      final ledgerId = await SeedService.createDefaultLedger(db, l10n, currency);
-      logger.info('seed', '已创建账本 ID: $ledgerId');
+      seedLedgerId =
+          await SeedService.createDefaultLedger(db, l10n, currency);
+      logger.info('seed', '已创建账本 ID: $seedLedgerId');
     } else {
-      logger.info('seed', '跳过默认账本创建');
+      // 跳过建账本时若库里已有账本，默认分类仍归到最早那个账本，
+      // 避免生成 ledger_id=NULL 的分类（v38 后这些分类不会显示）。
+      final existing = await (db.select(db.ledgers)
+            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+          .get();
+      if (existing.isNotEmpty) seedLedgerId = existing.first.id;
+      logger.info('seed', '跳过默认账本创建，复用账本 ID: $seedLedgerId');
     }
 
     // 2. 创建默认分类（可选）
     if (!skipCategories) {
       if (useHierarchicalCategories) {
-        await createHierarchicalCategories(db, l10n);
+        await createHierarchicalCategories(db, l10n, ledgerId: seedLedgerId);
         logger.info('seed', '已创建二级分类');
       } else {
-        await createFlatCategories(db, l10n);
+        await createFlatCategories(db, l10n, ledgerId: seedLedgerId);
         logger.info('seed', '已创建一级分类');
       }
     } else {

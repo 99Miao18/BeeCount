@@ -37,7 +37,18 @@ const _presets = <_Preset>[
   }),
 ];
 
-Future<void> seedPresetLedgers(WidgetRef ref) async {
+// 冷启动与分类页可能同时触发 seed；并发时复用同一次执行，避免重复建账本。
+Future<void>? _runningSeed;
+
+Future<void> seedPresetLedgers(WidgetRef ref) {
+  final running = _runningSeed;
+  if (running != null) return running;
+  final task = _seedPresetLedgers(ref).whenComplete(() => _runningSeed = null);
+  _runningSeed = task;
+  return task;
+}
+
+Future<void> _seedPresetLedgers(WidgetRef ref) async {
   final repo = ref.read(repositoryProvider);
   final ledgers = await repo.getAllLedgers();
   final categories = await repo.getAllCategories();
