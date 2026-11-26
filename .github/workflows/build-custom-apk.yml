@@ -29,16 +29,16 @@ jobs:
       - name: 重新生成 Drift/JsonSerializable 代码
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: 构建可安装的 debug APK（dev 风味，包名带 .dev.debug 可与官方版并存）
+      - name: 构建可安装的 debug APK（dev 风味，仅 arm64-v8a 单包）
         # 注意：项目 Gradle 故意过滤掉 prodDebug 变体，不能用 --flavor prod --debug。
         # dev debug 包名为 com.tntlikely.beecount.dev.debug，可与官方版同时安装。
-        run: flutter build apk --debug --flavor dev
+        # BEECOUNT_APK_ABI=arm64-v8a 关闭 splits，只产一个包；
+        # 覆盖小米 / 红米近年全部 64 位机型，不打包 armeabi-v7a / x86_64 / universal。
+        run: BEECOUNT_APK_ABI=arm64-v8a flutter build apk --debug --flavor dev
 
-      - name: 上传 APK
+      - name: 上传 APK（唯一产物）
         uses: actions/upload-artifact@v4
         with:
           name: beecount-custom-apk
-          path: |
-            build/app/outputs/flutter-apk/app-dev-debug.apk
-            build/app/outputs/apk/dev/debug/*.apk
+          path: build/app/outputs/flutter-apk/app-dev-debug.apk
           if-no-files-found: error
