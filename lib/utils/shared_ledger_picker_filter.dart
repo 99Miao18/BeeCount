@@ -35,12 +35,15 @@ class LedgerPickerContext {
     required this.ledgerSyncId,
     required this.isShared,
     required this.myRole,
+    this.ledgerId,
   });
 
   /// 当前 ledger 的 server external_id(syncId)。null 时不过滤(单人账本兜底)。
   final String? ledgerSyncId;
   final bool isShared;
   final String myRole;
+  // 定制：本地账本 id，用于按 ledger_id 过滤分类。
+  final int? ledgerId;
 
   bool get isEditorInShared => isShared && myRole != 'owner';
 }
@@ -56,6 +59,7 @@ extension SharedLedgerPickerFilter on BeeDatabase {
       ledgerSyncId: l.syncId,
       isShared: l.isShared,
       myRole: l.myRole,
+      ledgerId: l.id,
     );
   }
 
@@ -74,8 +78,14 @@ extension SharedLedgerPickerFilter on BeeDatabase {
     String? kind,
     bool topLevelOnly = true,
   }) async {
+    // 定制：先按分类归属账本过滤（ledger_id 为 null 的通用分类在所有账本可见）。
+    final visible = ctx?.ledgerId == null
+        ? all
+        : all
+            .where((c) => c.ledgerId == null || c.ledgerId == ctx!.ledgerId)
+            .toList();
     if (ctx == null || !ctx.isEditorInShared || ctx.ledgerSyncId == null) {
-      return all;
+      return visible;
     }
     // Editor + 共享账本 — 用 SharedLedger* 数据替换主表数据
     final q = select(sharedLedgerCategories)

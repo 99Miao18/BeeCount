@@ -32,6 +32,7 @@ import 'services/platform/app_link_service.dart';
 import 'services/platform/quick_actions_service.dart';
 import 'services/billing/post_processor.dart';
 import 'services/data/recurring_transaction_service.dart';
+import 'services/data/preset_ledger_seed.dart';
 import 'services/system/logger_service.dart';
 import 'services/security/app_lock_service.dart';
 import 'providers/security_providers.dart';
@@ -54,6 +55,8 @@ class _BeeAppState extends ConsumerState<BeeApp>
     AnalyticsPage(),
     AccountsPage(asTab: true),
     MinePage(),
+    // 定制：记账作为底部导航的第 5 个 tab，保留底部五按钮，去掉左上角返回。
+    TransactionEditorPage(initialKind: 'expense', quickAdd: true, embedded: true),
   ];
 
   // 双击检测：记录最后一次点击的时间和索引
@@ -62,6 +65,9 @@ class _BeeAppState extends ConsumerState<BeeApp>
 
   // 双击返回退出：记录最后一次返回键按下时间
   DateTime? _lastBackPressTime;
+
+  // 定制：冷启动直接进入记账页（只执行一次，深链/应用锁优先）
+  bool _startupEditorOpened = false;
 
   // AppLink 监听订阅
   ProviderSubscription<AppLinkAction?>? _appLinkSubscription;
@@ -115,6 +121,27 @@ class _BeeAppState extends ConsumerState<BeeApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupAppLinkListener();
       _setupQuickActions();
+      _maybeOpenStartupRecording();
+    });
+  }
+
+  /// 定制：冷启动后直接进入「记一笔」。
+  /// MainApp 只在 appInitState==ready 且未锁屏时挂载 BeeApp，所以这里不需要
+  /// 再等初始化；但深链/小组件动作由 _executeDrain 同一个函数派发，必须让它
+  /// 优先，故延迟一拍并检查 _lastDrainedDeepLinkTs。
+  void _maybeOpenStartupRecording() {
+    if (_startupEditorOpened) return;
+    _startupEditorOpened = true;
+    Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      if (_lastDrainedDeepLinkTs != null) return;
+      if (ref.read(isAppLockedProvider)) return;
+      final nav = Navigator.of(context, rootNavigator: true);
+      if (nav.canPop()) return;
+      // 定制：首次启动内置三套账本分类（只补缺失，不动已有数据）。
+      unawaited(seedPresetLedgers(ref));
+      // 定制：切到记账 tab，而不是 push 一个没有底部栏的独立页面。
+      ref.read(bottomTabIndexProvider.notifier).state = 4;
     });
   }
 
@@ -891,15 +918,8 @@ class _BeeAppState extends ConsumerState<BeeApp>
                 }
               },
               onCenterTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const TransactionEditorPage(
-                      initialKind: 'expense',
-                      quickAdd: true,
-                    ),
-                  ),
-                );
+                // 定制：记账改为主壳内的 tab，保留底部五按钮。
+                ref.read(bottomTabIndexProvider.notifier).state = 4;
               },
               onCenterLongPressStart: _onLongPressStart,
               onCenterLongPressMoveUpdate: _onLongPressMoveUpdate,
@@ -1104,6 +1124,8 @@ class _BeeBottomBar extends ConsumerWidget {
   }
 
   Widget _buildCenterTabItem(Color inactiveColor) {
+    final isActive = currentIndex == 4;
+    final iconColor = isActive ? primaryColor : inactiveColor;
     return Expanded(
       child: GestureDetector(
         key: centerButtonKey,
@@ -1113,25 +1135,39 @@ class _BeeBottomBar extends ConsumerWidget {
         onLongPressMoveUpdate: onCenterLongPressMoveUpdate,
         onLongPressEnd: onCenterLongPressEnd,
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.add_circle_outline, color: inactiveColor, size: 22),
-              const SizedBox(height: 1),
-              Text(
-                l10n.tabRecord,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                textScaler: TextScaler.noScaling,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: inactiveColor,
-                  fontWeight: FontWeight.w400,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: _tabPadding,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? primaryColor.withValues(alpha: 0.12)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isActive ? Icons.add_circle : Icons.add_circle_outline,
+                  color: iconColor,
+                  size: 22,
                 ),
-              ),
-            ],
+                const SizedBox(height: 1),
+                Text(
+                  l10n.tabRecord,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  textScaler: TextScaler.noScaling,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: iconColor,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

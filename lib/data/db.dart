@@ -106,6 +106,8 @@ class Categories extends Table {
   TextColumn get customIconPath => text().nullable()(); // 自定义图标本地路径
   TextColumn get communityIconId => text().nullable()(); // 社区图标ID（预留）
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
+  // 定制：分类归属账本。null = 通用分类（升级前的老数据 / 所有账本可见）。
+  IntColumn get ledgerId => integer().nullable()();
 }
 
 class Transactions extends Table {
@@ -526,7 +528,7 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 36; // 自动接管时保留需要人工核对的原因
+  int get schemaVersion => 37; // v37: categories.ledger_id（分类绑定账本，定制）
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1290,6 +1292,11 @@ class BeeDatabase extends _$BeeDatabase {
           if (from < 36) {
             await _addColumnIfMissing('recurring_transactions', 'cloud_handoff_issue',
                 'ALTER TABLE recurring_transactions ADD COLUMN cloud_handoff_issue TEXT;');
+          }
+          if (from < 37) {
+            // 老分类保持 ledger_id = NULL，即"通用分类"，所有账本仍可见。
+            await _addColumnIfMissing('categories', 'ledger_id',
+                'ALTER TABLE categories ADD COLUMN ledger_id INTEGER;');
           }
         },
         onCreate: (m) async {

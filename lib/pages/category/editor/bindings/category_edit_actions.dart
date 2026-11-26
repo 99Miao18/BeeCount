@@ -194,7 +194,10 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     final name = _nameController.text.trim();
     try {
       if (await repo.isCategoryNameDuplicate(
-          name: name, kind: widget.kind, excludeId: widget.category?.id)) {
+          name: name,
+          kind: widget.kind,
+          excludeId: widget.category?.id,
+          ledgerId: ref.read(currentLedgerIdProvider))) {
         if (mounted) {
           setState(() => _duplicate = true);
           await _message(l.categorySaveError, l.categoryNameDuplicate);
@@ -209,9 +212,13 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
                     parentId: _parent!.id,
                     name: name,
                     kind: widget.kind,
-                    icon: _icon)
+                    icon: _icon,
+                    ledgerId: ref.read(currentLedgerIdProvider))
                 : await repo.createCategory(
-                    name: name, kind: widget.kind, icon: _icon));
+                    name: name,
+                    kind: widget.kind,
+                    icon: _icon,
+                    ledgerId: ref.read(currentLedgerIdProvider)));
         if (_iconSource == BeeCategoryIconSource.custom && _newImage) {
           // Promotion may remove the temporary crop; retain its saved path for a
           // retry if a later database operation rolls back. Never remove old or
