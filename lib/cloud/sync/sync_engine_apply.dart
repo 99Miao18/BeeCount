@@ -448,6 +448,16 @@ extension SyncEngineApplyExt on SyncEngine {
     final iconType = payload['iconType'] as String? ?? 'material';
     final parentName = payload['parentName'] as String?;
     final parentSyncId = (payload['parentSyncId'] as String?)?.trim();
+    // 定制：分类归属账本。server 只透传该 key，不参与投影；App 间按 syncId 还原。
+    final categoryLedgerSyncId = payload['ledgerSyncId'] as String?;
+    int? categoryLedgerId;
+    if (categoryLedgerSyncId != null && categoryLedgerSyncId.isNotEmpty) {
+      final ownerLedger = await (db.select(db.ledgers)
+            ..where((l) => l.syncId.equals(categoryLedgerSyncId)))
+          .getSingleOrNull();
+      // 账本可能还没拉到本地，此时保留旧值，等下次同步重新对齐。
+      categoryLedgerId = ownerLedger?.id ?? existing?.ledgerId;
+    }
 
     // 名称是展示/旧协议兜底；有稳定 ID 时不按过期名字挂到另一个分类。
     int? parentId;
@@ -541,6 +551,7 @@ extension SyncEngineApplyExt on SyncEngine {
         customIconPath: d.Value(resolvedCustomIconPath),
         communityIconId: d.Value(payload['communityIconId'] as String?),
         parentId: d.Value(parentId),
+        ledgerId: d.Value(categoryLedgerId),
       ));
       logger.debug('SyncEngine', 'pull: 更新分类 $syncId');
     } else {
@@ -556,6 +567,7 @@ extension SyncEngineApplyExt on SyncEngine {
               communityIconId: d.Value(payload['communityIconId'] as String?),
               parentId: d.Value(parentId),
               syncId: d.Value(syncId),
+              ledgerId: d.Value(categoryLedgerId),
             ),
           );
       activePullCache?.putCategory(syncId, localCategoryId);
