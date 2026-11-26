@@ -18,6 +18,7 @@ abstract class CategoryRepository {
     int level = 1,
     int? parentId,
     String? syncId,
+    int? ledgerId,
   });
 
   /// 创建二级分类。撞同名同样抛 [DuplicateNameException]。
@@ -29,6 +30,7 @@ abstract class CategoryRepository {
     String? icon,
     int? sortOrder,
     String? syncId,
+    int? ledgerId,
   });
 
   /// 更新分类
@@ -57,7 +59,12 @@ abstract class CategoryRepository {
     required String kind,
     String? icon,
     int? sortOrder,
+    int? ledgerId,
   });
+
+  /// 定制：把勾选的默认分类复制到新账本（含父子关系），副本使用新 syncId。
+  Future<void> inheritCategoriesForLedger(
+      int targetLedgerId, List<int> sourceCategoryIds);
 
   /// 根据ID获取分类
   Future<Category?> getCategoryById(int categoryId);
@@ -82,6 +89,7 @@ abstract class CategoryRepository {
     required String name,
     required String kind,
     int? excludeId,
+    int? ledgerId,
   });
 
   /// 检查分类是否有子分类

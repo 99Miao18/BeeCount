@@ -116,18 +116,30 @@ final appInitProvider = FutureProvider<void>((ref) async {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   // 同步代数 bump 后重算，让 web 改分类能立即反映到 mobile。
   ref.watch(syncGenerationProvider);
+  final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
-  return await repo.getAllCategories();
+  final all = await repo.getAllCategories();
+  // 定制：只显示当前账本的分类 + 通用分类。
+  return all
+      .where((c) => c.ledgerId == null || c.ledgerId == ledgerId)
+      .toList();
 });
 
 // 分类与交易笔数组合Provider（响应式版本）
 // 使用 autoDispose 在页面关闭时自动取消订阅
 final categoriesWithCountProvider = StreamProvider.autoDispose<
     List<({Category category, int transactionCount})>>((ref) {
+  final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
-  // §7 决策 v25:Owner 资源不再 mirror 主表,管理页直接读主 Categories
-  // 自然只看到用户自己 user-global 行,无需过滤。
-  return repo.watchCategoriesWithCount();
+  // §7 决策 v25:Owner 资源不再 mirror 主表,管理页直接读主 Categories。
+  // 定制：再按账本归属过滤（null 的老分类视为通用分类）。
+  return repo.watchCategoriesWithCount().map(
+        (rows) => rows
+            .where((r) =>
+                r.category.ledgerId == null ||
+                r.category.ledgerId == ledgerId)
+            .toList(),
+      );
 });
 
 // 虚拟转账分类Provider（全局缓存，用于获取转账图标）

@@ -1351,6 +1351,7 @@ class LocalRepository extends BaseRepository {
     int level = 1,
     int? parentId,
     String? syncId,
+    int? ledgerId,
   }) async {
     final id = await _categoryRepo.createCategory(
       name: name,
@@ -1360,6 +1361,7 @@ class LocalRepository extends BaseRepository {
       level: level,
       parentId: parentId,
       syncId: syncId,
+      ledgerId: ledgerId,
     );
     if (changeTracker != null) {
       final cat = await _categoryRepo.getCategoryById(id);
@@ -1383,6 +1385,7 @@ class LocalRepository extends BaseRepository {
     String? icon,
     int? sortOrder,
     String? syncId,
+    int? ledgerId,
   }) async {
     final id = await _categoryRepo.createSubCategory(
       parentId: parentId,
@@ -1391,6 +1394,7 @@ class LocalRepository extends BaseRepository {
       icon: icon,
       sortOrder: sortOrder,
       syncId: syncId,
+      ledgerId: ledgerId,
     );
     if (changeTracker != null) {
       final cat = await _categoryRepo.getCategoryById(id);
@@ -1436,9 +1440,20 @@ class LocalRepository extends BaseRepository {
     required String kind,
     String? icon,
     int? sortOrder,
+    int? ledgerId,
   }) =>
       _categoryRepo.upsertCategory(
-          name: name, kind: kind, icon: icon, sortOrder: sortOrder);
+          name: name,
+          kind: kind,
+          icon: icon,
+          sortOrder: sortOrder,
+          ledgerId: ledgerId);
+
+  @override
+  Future<void> inheritCategoriesForLedger(
+          int targetLedgerId, List<int> sourceCategoryIds) =>
+      _categoryRepo.inheritCategoriesForLedger(
+          targetLedgerId, sourceCategoryIds);
 
   @override
   Future<Category?> getCategoryById(int categoryId) =>
@@ -1458,9 +1473,15 @@ class LocalRepository extends BaseRepository {
 
   @override
   Future<bool> isCategoryNameDuplicate(
-          {required String name, required String kind, int? excludeId}) =>
+          {required String name,
+          required String kind,
+          int? excludeId,
+          int? ledgerId}) =>
       _categoryRepo.isCategoryNameDuplicate(
-          name: name, kind: kind, excludeId: excludeId);
+          name: name,
+          kind: kind,
+          excludeId: excludeId,
+          ledgerId: ledgerId);
 
   @override
   Future<bool> hasSubCategories(int categoryId) =>

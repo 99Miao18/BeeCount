@@ -701,6 +701,14 @@ mixin _LedgerActions on ConsumerState<LedgersPageNew> {
         return id;
       });
 
+      // 定制：新建账本时选择要继承的默认分类（只列出通用分类）。
+      if (!mounted) return;
+      final inherited = await _pickInheritCategories(context);
+      if (inherited.isNotEmpty) {
+        await repo.inheritCategoriesForLedger(newLedgerId, inherited);
+        ref.invalidate(categoriesWithCountProvider);
+      }
+
       // 空账本场景(welcome 未勾默认账本 / 老用户导入配置不含账本)进入此页
       // 创建第一个账本时,currentLedgerIdProvider 还指向默认值 1(无效),
       // 必须切到新账本 id 否则首页 header 胶囊继续显示「新建账本」、列表为
@@ -729,6 +737,61 @@ mixin _LedgerActions on ConsumerState<LedgersPageNew> {
       if (!mounted) return;
       showBeeToast(context, '创建失败: ${e.toString()}', tone: BeeTone.error);
     }
+  }
+
+  /// 定制：新建账本后弹出多选对话框，勾选要继承的通用分类。
+  /// 勾选一级分类时自动带上它的二级分类；返回去重后的分类 id 列表。
+  Future<List<int>> _pickInheritCategories(BuildContext context) async {
+    final all = await ref.read(repositoryProvider).getAllCategories();
+    final candidates = all.where((c) => c.ledgerId == null).toList();
+    if (candidates.isEmpty || !mounted) return const <int>[];
+
+    final selected = <int>{};
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (buildContext, setState) => AlertDialog(
+          title: const Text('继承默认分类'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 360,
+            child: ListView(
+              children: [
+                for (final c in candidates)
+                  CheckboxListTile(
+                    value: selected.contains(c.id),
+                    title: Text(c.name),
+                    subtitle: Text(c.kind == 'income' ? '收入' : '支出'),
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        selected.add(c.id);
+                      } else {
+                        selected.remove(c.id);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('跳过'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return const <int>[];
+    final ids = selected.toSet();
+    for (final c in candidates) {
+      if (c.parentId != null && ids.contains(c.parentId)) ids.add(c.id);
+    }
+    return ids.toList();
   }
 
   Future<({String name, String currency, int monthStartDay})?>

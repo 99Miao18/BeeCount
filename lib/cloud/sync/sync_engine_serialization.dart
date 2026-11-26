@@ -232,12 +232,21 @@ extension SyncEngineSerializationExt on SyncEngine {
             logger.warning('SyncEngine', '分类图标增量上传失败: ${category.name} $e', st);
           }
         }
+        // 定制：账本归属用 ledger.syncId 跨设备传递（本地 int id 不可靠）。
+        String? categoryLedgerSyncId;
+        if (category.ledgerId != null) {
+          final ownerLedger = await (db.select(db.ledgers)
+                ..where((l) => l.id.equals(category.ledgerId!)))
+              .getSingleOrNull();
+          categoryLedgerSyncId = ownerLedger?.syncId;
+        }
         return EntitySerializer.serializeCategory(
           category,
           parentName: parentName,
           parentSyncId: parentSyncId,
           iconCloudFileId: iconCloudFileId,
           iconCloudSha256: iconCloudSha256,
+          ledgerSyncId: categoryLedgerSyncId,
         );
 
       case 'tag':
@@ -631,6 +640,10 @@ extension SyncEngineSerializationExt on SyncEngine {
           ..where((a) => a.ledgerId.equals(ledger.id)))
         .get();
     final categories = await db.select(db.categories).get();
+    // 定制：分类 → 账本 syncId 映射，供导出 JSON 的 payload.ledgerSyncId 使用。
+    final ledgerSyncIds = {
+      for (final l in await db.select(db.ledgers).get()) l.id: l.syncId
+    };
     final tags = await db.select(db.tags).get();
 
     final items = <Map<String, dynamic>>[];
@@ -706,7 +719,11 @@ extension SyncEngineSerializationExt on SyncEngine {
           parentSyncId = parent?.syncId;
         }
         return EntitySerializer.serializeCategory(c,
-            parentName: parentName, parentSyncId: parentSyncId);
+            parentName: parentName,
+            parentSyncId: parentSyncId,
+            ledgerSyncId: c.ledgerId == null
+                ? null
+                : ledgerSyncIds[c.ledgerId]);
       }).toList(),
       'tags': tags.map((t) => EntitySerializer.serializeTag(t)).toList(),
       'items': items,

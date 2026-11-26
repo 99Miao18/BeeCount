@@ -22,6 +22,8 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   final String initialKind; // 'expense', 'income', or 'transfer'
   // Retained for existing callers; recording now opens the full editor.
   final bool quickAdd;
+  // 定制：作为底部导航 tab 内嵌时隐藏左上角返回按钮。
+  final bool embedded;
 
   final int? initialCategoryId;
   final String? initialNote; // 用于金额输入弹窗回填备注
@@ -42,6 +44,7 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     this.isCopy = false,
     required this.initialKind,
     this.quickAdd = false,
+    this.embedded = false,
     this.initialCategoryId,
     this.initialNote,
     this.initialAmount,
@@ -213,6 +216,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                   ],
                   selectedIndex: _selectedType,
                   backLabel: l10n.commonBack,
+                  showBackButton: !embedded,
                   onBack: () => Navigator.maybePop(context),
                   moreLabel: l10n.txFlagMoreOptions,
                   onMore: kind == 'transfer'

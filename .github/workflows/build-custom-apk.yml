@@ -1,0 +1,42 @@
+name: 构建定制版 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - custom-ledger-categories
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.3"
+          channel: stable
+          cache: true
+
+      - name: 安装依赖
+        run: flutter pub get
+
+      - name: 重新生成 Drift/JsonSerializable 代码
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 构建可安装的 debug APK（使用 Flutter debug 签名）
+        run: flutter build apk --debug --flavor prod
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: beecount-custom-apk
+          path: |
+            build/app/outputs/apk/prod/debug/*.apk
+            build/app/outputs/flutter-apk/app-prod-debug.apk
+          if-no-files-found: error

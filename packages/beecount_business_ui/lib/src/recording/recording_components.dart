@@ -10,6 +10,7 @@ class RecordingHeader extends StatelessWidget {
       required this.onChanged,
       required this.backLabel,
       required this.onBack,
+      this.showBackButton = true,
       this.moreLabel,
       this.onMore,
       this.height = 50})
@@ -20,6 +21,7 @@ class RecordingHeader extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final String backLabel;
   final VoidCallback onBack;
+  final bool showBackButton;
   final String? moreLabel;
   final VoidCallback? onMore;
   final double height;
@@ -30,10 +32,13 @@ class RecordingHeader extends StatelessWidget {
       child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            BeeIconButton(
-                label: backLabel,
-                icon: const BeeLineIcon('ChevronLeft', size: 22),
-                onPressed: onBack),
+            if (showBackButton)
+              BeeIconButton(
+                  label: backLabel,
+                  icon: const BeeLineIcon('ChevronLeft', size: 22),
+                  onPressed: onBack)
+            else
+              const SizedBox(width: 44),
             Expanded(
                 child: Align(
                     alignment: Alignment.bottomCenter,
