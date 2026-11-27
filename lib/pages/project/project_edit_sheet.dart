@@ -5,14 +5,14 @@ import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/db.dart';
-import '../../../l10n/app_localizations.dart';
-import '../../../providers.dart';
-import '../../../services/billing/post_processor.dart';
-import '../../../services/data/tag_seed_service.dart';
-import '../../../services/project/project_tags.dart';
-import '../../tag/detail/bindings/tag_detail.dart' show tagDetailColor;
-import '../../tag/editor/bindings/tag_editor.dart';
+import '../../data/db.dart';
+import '../../l10n/app_localizations.dart';
+import '../../providers.dart';
+import '../../services/billing/post_processor.dart';
+import '../../services/data/tag_seed_service.dart';
+import '../../services/project/project_tags.dart';
+import '../tag/detail/bindings/tag_detail.dart' show tagDetailColor;
+import '../tag/editor/bindings/tag_editor.dart';
 
 /// 新建 / 编辑项目。
 ///
