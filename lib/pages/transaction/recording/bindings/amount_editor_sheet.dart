@@ -1326,7 +1326,9 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     Widget metadata(Widget? categoryAction) => RecordingDetailsCard(
           categoryAction: categoryAction,
           noteExpanded: noteExpanded,
-          noteToggle: compact
+          // 定制:denseLayout 下备注默认折叠,必须同时给出展开入口,
+          // 否则非紧凑屏(compact=false)会连按钮都没有,备注无法输入。
+          noteToggle: (compact || widget.denseLayout)
               ? RecordingNoteToggle(
                   key: const ValueKey('recording-note-compact'),
                   label: l10n.commonNoteHint,
