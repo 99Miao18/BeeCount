@@ -90,6 +90,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       else
         // 与明细页一致：标题旁直接挂账本名，点它就能换账本。
         BeePageHeader(
+            title: l.tabInsights,
             showTitle: false,
             padding:
                 EdgeInsets.symmetric(horizontal: compact ? 17 : 20, vertical: 8),

@@ -1,0 +1,9 @@
+﻿2026-11-27T15:43:03.5762294Z ##[group]Run rm -f android/custom/beecount-debug.p12 android/custom/keystore.properties
+2026-11-27T15:43:03.5762680Z [36;1mrm -f android/custom/beecount-debug.p12 android/custom/keystore.properties[0m
+2026-11-27T15:43:03.5799438Z shell: /usr/bin/bash -e {0}
+2026-11-27T15:43:03.5799604Z env:
+2026-11-27T15:43:03.5799797Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-27T15:43:03.5800084Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.21-9/x64
+2026-11-27T15:43:03.5800368Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.3-x64/flutter
+2026-11-27T15:43:03.5800602Z   PUB_CACHE: /home/runner/.pub-cache
+2026-11-27T15:43:03.5800767Z ##[endgroup]

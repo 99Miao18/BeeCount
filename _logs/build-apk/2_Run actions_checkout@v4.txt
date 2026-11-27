@@ -1,0 +1,73 @@
+﻿2026-11-27T15:38:47.7431882Z ##[group]Run actions/checkout@v4
+2026-11-27T15:38:47.7432684Z with:
+2026-11-27T15:38:47.7433193Z   repository: 99Miao18/BeeCount
+2026-11-27T15:38:47.7438450Z   token: ***
+2026-11-27T15:38:47.7438957Z   ssh-strict: true
+2026-11-27T15:38:47.7439484Z   ssh-user: git
+2026-11-27T15:38:47.7440013Z   persist-credentials: true
+2026-11-27T15:38:47.7440590Z   clean: true
+2026-11-27T15:38:47.7441134Z   sparse-checkout-cone-mode: true
+2026-11-27T15:38:47.7441749Z   fetch-depth: 1
+2026-11-27T15:38:47.7442270Z   fetch-tags: false
+2026-11-27T15:38:47.7442823Z   show-progress: true
+2026-11-27T15:38:47.7443392Z   lfs: false
+2026-11-27T15:38:47.7443885Z   submodules: false
+2026-11-27T15:38:47.7444418Z   set-safe-directory: true
+2026-11-27T15:38:47.7445026Z   allow-unsafe-pr-checkout: false
+2026-11-27T15:38:47.7445722Z ##[endgroup]
+2026-11-27T15:38:47.9326250Z Syncing repository: 99Miao18/BeeCount
+2026-11-27T15:38:47.9328487Z ##[group]Getting Git version info
+2026-11-27T15:38:47.9329645Z Working directory is '/home/runner/work/BeeCount/BeeCount'
+2026-11-27T15:38:47.9330930Z [command]/usr/bin/git version
+2026-11-27T15:38:47.9336589Z git version 2.56.1
+2026-11-27T15:38:47.9350068Z ##[endgroup]
+2026-11-27T15:38:47.9361490Z Temporarily overriding HOME='/home/runner/work/_temp/2bacd95c-2589-4593-a674-9684499ebb4e' before making global git config changes
+2026-11-27T15:38:47.9364138Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-27T15:38:47.9366265Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/BeeCount/BeeCount
+2026-11-27T15:38:47.9417644Z Deleting the contents of '/home/runner/work/BeeCount/BeeCount'
+2026-11-27T15:38:47.9419760Z ##[group]Initializing the repository
+2026-11-27T15:38:47.9422748Z [command]/usr/bin/git init /home/runner/work/BeeCount/BeeCount
+2026-11-27T15:38:47.9504545Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-27T15:38:47.9506627Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-27T15:38:47.9508614Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-27T15:38:47.9510071Z hint: call:
+2026-11-27T15:38:47.9510913Z hint:
+2026-11-27T15:38:47.9511936Z hint: 	git config --global init.defaultBranch <name>
+2026-11-27T15:38:47.9513193Z hint:
+2026-11-27T15:38:47.9514522Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-27T15:38:47.9515998Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-27T15:38:47.9517415Z hint:
+2026-11-27T15:38:47.9518043Z hint: 	git branch -m <name>
+2026-11-27T15:38:47.9518797Z hint:
+2026-11-27T15:38:47.9519754Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-27T15:38:47.9520861Z Initialized empty Git repository in /home/runner/work/BeeCount/BeeCount/.git/
+2026-11-27T15:38:47.9523182Z [command]/usr/bin/git remote add origin https://github.com/99Miao18/BeeCount
+2026-11-27T15:38:47.9566915Z ##[endgroup]
+2026-11-27T15:38:47.9567885Z ##[group]Disabling automatic garbage collection
+2026-11-27T15:38:47.9569784Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-27T15:38:47.9600128Z ##[endgroup]
+2026-11-27T15:38:47.9601151Z ##[group]Setting up auth
+2026-11-27T15:38:47.9608144Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-27T15:38:47.9635876Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-27T15:38:48.0005302Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-27T15:38:48.0035002Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-27T15:38:48.0273893Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-27T15:38:48.0305044Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-27T15:38:48.0530180Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-27T15:38:48.0564513Z ##[endgroup]
+2026-11-27T15:38:48.0565437Z ##[group]Fetching the repository
+2026-11-27T15:38:48.0571598Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +4742d4ed7be75341199e40f981cc0ead3240a6bb:refs/remotes/origin/custom-ledger-categories
+2026-11-27T15:38:50.3952964Z From https://github.com/99Miao18/BeeCount
+2026-11-27T15:38:50.3954713Z  * [new ref]         4742d4ed7be75341199e40f981cc0ead3240a6bb -> origin/custom-ledger-categories
+2026-11-27T15:38:50.3957435Z ##[endgroup]
+2026-11-27T15:38:50.3958062Z ##[group]Determining the checkout info
+2026-11-27T15:38:50.3958914Z ##[endgroup]
+2026-11-27T15:38:50.3963617Z [command]/usr/bin/git sparse-checkout disable
+2026-11-27T15:38:50.4006297Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-27T15:38:50.4031220Z ##[group]Checking out the ref
+2026-11-27T15:38:50.4040630Z [command]/usr/bin/git checkout --progress --force -B custom-ledger-categories refs/remotes/origin/custom-ledger-categories
+2026-11-27T15:38:50.6785098Z Switched to a new branch 'custom-ledger-categories'
+2026-11-27T15:38:50.6787745Z branch 'custom-ledger-categories' set up to track 'origin/custom-ledger-categories'.
+2026-11-27T15:38:50.6804072Z ##[endgroup]
+2026-11-27T15:38:50.6845996Z [command]/usr/bin/git log -1 --format=%H
+2026-11-27T15:38:50.6869303Z 4742d4ed7be75341199e40f981cc0ead3240a6bb
