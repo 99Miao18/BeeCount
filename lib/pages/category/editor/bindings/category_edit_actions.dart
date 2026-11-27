@@ -20,8 +20,12 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     super.initState();
     final category = widget.category;
     _nameController = TextEditingController(text: category?.name ?? '');
-    _icon = categoryLineIconNames.containsKey(category?.icon)
-        ? category!.icon!
+    // 彩色图标（color:<Glyph>）也是合法值，不能因为查不到旧键就退回默认图标。
+    final savedIcon = category?.icon;
+    _icon = savedIcon != null &&
+            (CategoryIconStyle.isColored(savedIcon) ||
+                categoryLineIconNames.containsKey(savedIcon))
+        ? savedIcon
         : 'category';
     _iconSource = category?.iconType == 'custom'
         ? BeeCategoryIconSource.custom

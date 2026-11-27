@@ -1036,6 +1036,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get categoryIconGroupOtherIncome => 'Other Income';
 
   @override
+  String get categoryIconGroupColorful => 'Colorful';
+
+  @override
   String get categoryGenerateDefault => '기본 카테고리 생성';
 
   @override

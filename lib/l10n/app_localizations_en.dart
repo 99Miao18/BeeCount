@@ -1036,6 +1036,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryIconGroupOtherIncome => 'Other Income';
 
   @override
+  String get categoryIconGroupColorful => 'Colorful';
+
+  @override
   String get categoryGenerateDefault => 'Generate Default Categories';
 
   @override

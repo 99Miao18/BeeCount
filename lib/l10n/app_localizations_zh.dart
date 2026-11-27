@@ -1036,6 +1036,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryIconGroupOtherIncome => '其他收入';
 
   @override
+  String get categoryIconGroupColorful => '彩色';
+
+  @override
+  String get categoryIconGroupColorful => '彩色';
+
+  @override
   String get categoryGenerateDefault => '生成默认分类';
 
   @override

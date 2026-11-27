@@ -11,6 +11,7 @@ import 'editor/bindings/category_icon_catalog.dart';
 import 'editor/bindings/category_icon_draft.dart';
 import 'editor/bindings/category_line_icon_names.dart';
 import '../shared/scaffold/widgets/page_scaffold.dart';
+import '../shared/resources/bindings/category_icon_glyph.dart';
 import '../shared/resources/bindings/recording_category_icon.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/system/logger_service.dart';
@@ -38,8 +39,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
     final groups = categoryEditorIconGroups(l, widget.kind);
     BeeIconChoice<String> choice(String key) => BeeIconChoice(
         value: key,
-        label: key,
-        icon: BeeLineIcon(categoryLineIconNames[key] ?? 'Shapes', size: 22));
+        label: CategoryIconStyle.glyphOf(key),
+        icon: CategoryIconGlyph(icon: key, size: 24));
     return V4PageScaffold(
         body: Column(children: [
       BeePageHeader(

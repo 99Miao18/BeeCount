@@ -1978,6 +1978,12 @@ abstract class AppLocalizations {
   /// **'Other Income'**
   String get categoryIconGroupOtherIncome;
 
+  /// No description provided for @categoryIconGroupColorful.
+  ///
+  /// In en, this message translates to:
+  /// **'Colorful'**
+  String get categoryIconGroupColorful;
+
   /// No description provided for @categoryGenerateDefault.
   ///
   /// In en, this message translates to:

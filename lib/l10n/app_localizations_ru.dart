@@ -1084,6 +1084,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get categoryIconGroupOtherIncome => 'Прочие доходы';
 
   @override
+  String get categoryIconGroupColorful => 'Цветные';
+
+  @override
   String get categoryGenerateDefault => 'Создать стандартные категории';
 
   @override

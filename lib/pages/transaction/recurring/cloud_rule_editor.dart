@@ -20,7 +20,7 @@ import '../../../providers.dart';
 import '../../../services/data/recurring_transaction_service.dart';
 import '../../../utils/category_utils.dart';
 import '../../../utils/currencies.dart';
-import '../../category/editor/bindings/category_line_icon_names.dart';
+import '../../shared/resources/bindings/category_icon_glyph.dart';
 import '../../shared/currency/currency_flag.dart';
 import '../../shared/selectors/currency_picker_sheet.dart';
 import '../../shared/selectors/ledger_selector_dialog.dart';
@@ -202,8 +202,7 @@ class _CloudRuleEditorState extends ConsumerState<CloudRuleEditor> {
         id: entry['id'] as String,
         label:
             CategoryUtils.displayName(entry['name'] as String, l, kind: type),
-        icon: BeeLineIcon(categoryLineIconNames[entry['icon']] ?? 'Shapes',
-            size: 18),
+        icon: CategoryIconGlyph(icon: entry['icon'] as String?, size: 18),
         enabled: children.isEmpty,
         children: children,
       );
@@ -738,9 +737,8 @@ class _CloudRuleEditorState extends ConsumerState<CloudRuleEditor> {
                   select: selectCategory,
                   leading: category == null
                       ? null
-                      : BeeLineIcon(
-                          categoryLineIconNames[category['icon']] ?? 'Shapes',
-                          size: 22)),
+                      : CategoryIconGlyph(
+                          icon: category['icon'] as String?, size: 22)),
               BeeRecurringEditorField.account: field(
                   sourceTitle, accountValue(sourceKey), 'Wallet',
                   select: () => selectAccount(sourceKey, sourceTitle)),
