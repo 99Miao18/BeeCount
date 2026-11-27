@@ -126,12 +126,3 @@ class TrashItem {
     );
   }
 }
-
-/// 恢复结果：成功恢复的笔数与跳过的笔数（分类/账户已不存在时置空但照样恢复，
-/// 跳过只发生在交易本身已被彻底删除或账本不匹配时）。
-class TrashRestoreResult {
-  const TrashRestoreResult({required this.restored, required this.skipped});
-  final int restored;
-  final int skipped;
-  int get total => restored + skipped;
-}

@@ -3353,6 +3353,13 @@ class LocalRepository extends BaseRepository {
     final existingTags = (await getAllTags()).map((t) => t.id).toSet();
     final tagIds = item.tagIds.where(existingTags.contains).toList();
 
+    // 转账必须有两侧账户；账户被删掉后恢复出来会是一笔没有去向的转账，
+    // 宁可失败让用户在回收站里彻底删掉。
+    if (item.type == 'transfer' && (accountId == null || toAccountId == null)) {
+      logger.warning('Trash', '转账账户已删除，放弃恢复 id=$trashId');
+      return false;
+    }
+
     // 新 syncId（addTransaction 不传就自动生成）：云端的“删除”标记已经存在，
     // 复用旧 syncId 会在下一次同步被重新删掉。
     final newId = await addTransaction(
