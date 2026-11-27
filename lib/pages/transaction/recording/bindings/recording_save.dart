@@ -108,6 +108,9 @@ Future<void> persistRecordingDraft(
   // 刷新：账本笔数与全局统计
   ref.invalidate(countsForLedgerProvider(ledgerId));
   ref.read(statsRefreshProvider.notifier).state++;
+  // 刷新：分类区「上次使用 / 常用」排序（刚记的这笔要立刻排到第一格）
+  ref.invalidate(
+      recordingCategoryUsageProvider((ledgerId: ledgerId, kind: kind)));
   // 刷新：预算数据
   ref.read(budgetRefreshProvider.notifier).state++;
 }

@@ -264,6 +264,7 @@ class RecordingCategoryTile extends StatelessWidget {
       this.selected = false,
       this.expanded = false,
       this.hasChildren = false,
+      this.marker,
       this.compact = false});
   final bool compact;
   final String label;
@@ -272,6 +273,10 @@ class RecordingCategoryTile extends StatelessWidget {
   final bool selected;
   final bool expanded;
   final bool hasChildren;
+
+  /// Tiny corner badge on the icon (e.g. "last used" dot). Kept optional so the
+  /// plain category grid stays unchanged.
+  final Widget? marker;
 
   static const _iconExtent = 34.0;
   static const _labelGap = 4.0;
@@ -341,6 +346,8 @@ class RecordingCategoryTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12)),
                           child: Stack(children: [
                             Center(child: icon),
+                            if (marker != null)
+                              Positioned(top: 0, right: 0, child: marker!),
                             if (hasChildren)
                               Positioned(
                                   right: 0,
