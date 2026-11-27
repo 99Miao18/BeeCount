@@ -92,10 +92,12 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     final repo = ref.read(repositoryProvider), l = AppLocalizations.of(context);
     final future = () async {
       var all = await repo.getTopLevelCategories(widget.kind);
+      // 定制 v38：分类严格归属账本。这里必须按当前账本过滤——每个账本都
+      // 自带一整套模板分类，不过滤的话「餐饮」「大交通」会按账本数量重复
+      // 堆成一长串，用户根本分不清哪个是当前账本的。
       if (repo is LocalRepository) {
-        final scope = await repo.db.loadLedgerPickerContext(null);
-        all = await repo.db
-            .filterCategoriesForLedger(all, scope, topLevelOnly: true);
+        final ledgerId = ref.read(currentLedgerIdProvider);
+        all = all.where((c) => c.ledgerId == ledgerId).toList();
       }
       return Future.wait(all.map((c) async {
         final count = await repo.getTransactionCountByCategory(c.id);

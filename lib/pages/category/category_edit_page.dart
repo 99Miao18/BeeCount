@@ -16,7 +16,6 @@ import '../../services/billing/post_processor.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/category_utils.dart';
 import '../../data/repositories/local/local_repository.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../transaction/category_detail_page.dart';
 import 'category_migration_page.dart';
 
