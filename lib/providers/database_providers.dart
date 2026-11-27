@@ -5,6 +5,7 @@ import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/base_repository.dart';
 import '../cloud/sync/change_tracker.dart';
+import '../services/project/project_tags.dart';
 import '../services/system/logger_service.dart';
 import '../utils/shared_ledger_picker_filter.dart';
 import 'shared_ledger_providers.dart';
@@ -62,6 +63,22 @@ final ledgerByIdProvider =
   final repo = ref.watch(repositoryProvider);
 
   return await repo.getLedgerById(ledgerId);
+});
+
+/// 当前账本的项目隔离钥匙（账本 syncId 派生，跨设备一致）。
+///
+/// 项目名在库里存成 `◆<钥匙>|<项目名>`，两个账本因此可以有同名但互相独立的
+/// 项目。放在这里而不是 project_providers，是为了让 tag_providers 也能用，
+/// 避免两个 provider 文件互相 import。详见 `services/project/project_tags.dart`。
+final currentProjectScopeProvider = FutureProvider<String>((ref) async {
+  final ledgerId = ref.watch(currentLedgerIdProvider);
+  // 账本 syncId 可能在首次同步前是 null，同步回来后要重算钥匙，
+  // 所以跟着共享资源刷新信号一起重建，而不是读 ledgerByIdProvider 的缓存。
+  ref.watch(sharedResourceRefreshProvider);
+  final repo = ref.watch(repositoryProvider);
+  final ledger = await repo.getLedgerById(ledgerId);
+  return ProjectTags.scopeKey(
+      ledgerSyncId: ledger?.syncId, ledgerId: ledgerId);
 });
 
 // 获取所有账本列表（Stream版本）

@@ -130,6 +130,14 @@ class ProjectListPage extends ConsumerWidget {
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: Theme.of(context).hintColor))),
+                      // 项目名里编了账本钥匙，别账本的同名项目不会混进来。
+                      Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(l.projectScopeHint,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: Theme.of(context).hintColor))),
                     ]);
               })),
     ]));

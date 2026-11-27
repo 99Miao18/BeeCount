@@ -56,15 +56,21 @@ class _ProjectEditSheetState extends ConsumerState<ProjectEditSheet> {
   Future<void> _save() async {
     if (_saving) return;
     final l = AppLocalizations.of(context);
-    final name = _name.text.trim();
+    // 「|」是账本钥匙的分隔符，名字里出现会把解析弄乱，直接剔除。
+    final name = _name.text.trim().replaceAll(ProjectTags.scopeSeparator, '');
     if (name.isEmpty) {
       showBeeToast(context, l.projectNameRequired, tone: BeeTone.error);
       return;
     }
     setState(() => _saving = true);
     try {
+      // 新建时把当前账本的钥匙编进名字（不同账本允许同名项目）；改名沿用
+      // 原标签的钥匙，避免把项目「搬」到别的账本。
+      final scope = widget.project == null
+          ? await ref.read(currentProjectScopeProvider.future)
+          : ProjectTags.parse(widget.project!.name).scope;
       final saved = await saveTagDraft(ref.read(repositoryProvider),
-          name: ProjectTags.storageName(name),
+          name: ProjectTags.storageName(name, scope: scope),
           color: _color,
           existing: widget.project);
       if (!mounted) return;

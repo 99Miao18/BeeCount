@@ -2853,6 +2853,7 @@
   "projectDays": "{days} days",
   "projectAll": "All projects",
   "projectEndedHint": "Moves here automatically once the last bill is over 30 days old",
+  "projectScopeHint": "Projects stay inside their ledger: switching ledgers shows only the projects of that ledger",
   "@projectDays": {
     "placeholders": {
       "days": {

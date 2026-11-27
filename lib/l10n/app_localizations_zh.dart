@@ -9663,6 +9663,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get projectEndedHint => '最后一笔超过 30 天自动归到这里，不用手动结束';
 
   @override
+  String get projectScopeHint => '项目按账本隔离：切到别的账本，只显示那个账本的项目';
+
+  @override
   String get transactionMoveChanged => '账本或所选账单已变更，请刷新后重新选择。';
 
   @override
@@ -19245,6 +19248,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get projectEndedHint => '最後一筆超過 30 天自動歸到這裡，不用手動結束';
+
+  @override
+  String get projectScopeHint => '專案按帳本隔離：切到別的帳本，只顯示那個帳本的專案';
 
   @override
   String get transactionMoveChanged => '帳本或所選帳單已變更，請重新整理後再選擇。';

@@ -10163,6 +10163,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectEndedHint => 'Проект попадает сюда, если последняя запись старше 30 дней';
 
   @override
+  String get projectScopeHint => 'Проекты привязаны к книге: при переключении видны только проекты этой книги';
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override

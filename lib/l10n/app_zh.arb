@@ -2716,6 +2716,7 @@
   "projectDays": "{days} 天",
   "projectAll": "全部项目",
   "projectEndedHint": "最后一笔超过 30 天自动归到这里，不用手动结束",
+  "projectScopeHint": "项目按账本隔离：切到别的账本，只显示那个账本的项目",
   "@projectDays": {
     "placeholders": {
       "days": {

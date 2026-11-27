@@ -156,6 +156,22 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
   }
 
+  /// 系统输入法（软键盘）是否真的顶起了窗口。
+  ///
+  /// 不能读 `MediaQuery.viewInsetsOf(context)`：主壳 Scaffold 开了
+  /// resizeToAvoidBottomInset，会把 body 的 viewInsets 清掉，页面里再读永远是
+  /// 0。结果就是键盘已经弹起、记账页仍然渲染着数字键盘 —— 两块键盘叠在一起，
+  /// 中间再被压到装不下，就出现 Bottom overflowed（红黑条）。
+  /// 这里直接读 FlutterView 的原始 inset，绕开 MediaQuery 的裁剪。
+  static bool _imeVisible(BuildContext context) {
+    final view = View.maybeOf(context);
+    if (view == null) {
+      return MediaQuery.viewInsetsOf(context).bottom > kMinInteractiveDimension;
+    }
+    return view.viewInsets.bottom / view.devicePixelRatio >
+        kMinInteractiveDimension;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -235,9 +251,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                         : kind == 'transfer'
                             ? TransferForm(
                                 key: _transferEditorKey,
-                                systemKeyboardVisible:
-                                    MediaQuery.viewInsetsOf(context).bottom >
-                                        kMinInteractiveDimension,
+                                systemKeyboardVisible: _imeVisible(context),
                                 onSavingChanged: (saving) {
                                   if (mounted) {
                                     setState(() => _cardSaving = saving);
@@ -264,11 +278,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                                 key: _cardEditorKey,
                                 cardLayout: true,
                                 denseLayout: widget.embedded,
-                                systemKeyboardVisible:
-                                    // Some floating/minimized IMEs report a
-                                    // 1px inset without covering the editor.
-                                    MediaQuery.viewInsetsOf(context).bottom >
-                                        kMinInteractiveDimension,
+                                systemKeyboardVisible: _imeVisible(context),
                                 categoryName: _cardCategory?.name ?? '',
                                 categoryId: _cardCategory?.id,
                                 categorySyncId: (_cardCategory?.id ?? 0) < 0

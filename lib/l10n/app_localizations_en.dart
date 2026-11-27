@@ -9709,6 +9709,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectEndedHint => 'Moves here automatically once the last bill is over 30 days old';
 
   @override
+  String get projectScopeHint => 'Projects stay inside their ledger: switching ledgers shows only the projects of that ledger';
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override

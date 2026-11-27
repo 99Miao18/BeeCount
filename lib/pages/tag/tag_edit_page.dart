@@ -43,7 +43,10 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
     try {
       final saved = await saveTagDraft(ref.read(repositoryProvider),
           name: _isProject
-              ? ProjectTags.storageName(_name.text)
+              // 改名时沿用原标签的账本钥匙，别把项目搬到当前账本；
+              // 旧版无钥匙的项目保持无钥匙（仍按使用账本归属）。
+              ? ProjectTags.storageName(_name.text,
+                  scope: ProjectTags.parse(widget.tag?.name ?? '').scope)
               : _name.text,
           color: _color,
           existing: widget.tag);

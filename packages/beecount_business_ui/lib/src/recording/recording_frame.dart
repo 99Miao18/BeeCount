@@ -30,66 +30,98 @@ class RecordingFrame extends StatelessWidget {
   final bool dense;
   final bool transfer;
   @override
-  Widget build(BuildContext context) {
-    final gap = dense
-        ? 6.0
-        : transfer
-            ? 8.0
-            : compact && narrow
-                ? 6.0
-                : 8.0;
-    // 定制：分类卡按内容高度收口（不再撑满整段空白）。收缩后剩下的高度
-    // 由下方明细行之后的空间吸收，备注行因此整体上移，贴近分类卡。
-    final categoryContent = fitCategory
-        ? Column(
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final gap = dense
+            ? 6.0
+            : transfer
+                ? 8.0
+                : compact && narrow
+                    ? 6.0
+                    : 8.0;
+        // 数字键盘只在「系统键盘没占着窗口」时显示，否则两块键盘叠在一起，
+        // 中间的区域被压到装不下就是 Bottom overflowed。
+        //
+        // 这里读 FlutterView 的原始 inset，而不是只看宿主传进来的
+        // [keyboardVisible]：键盘弹起时窗口约束会变，LayoutBuilder 一定会重跑，
+        // 而宿主页面不一定重建（真机上就出现过键盘已弹起、数字键盘还留着）。
+        final view = View.maybeOf(context);
+        final imeInset = view == null
+            ? MediaQuery.viewInsetsOf(context).bottom
+            : view.viewInsets.bottom / view.devicePixelRatio;
+        final showKeypad =
+            !keyboardVisible && imeInset <= kMinInteractiveDimension;
+        // 分类卡外框：圆角 + 卡片底色，尺寸完全由子节点决定（不再撑满整段），
+        // 否则格子只占两排时卡片会被拉伸成一大块白。
+        Widget categoryCard(Widget child) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: ColoredBox(
+                    color: BeeCardTheme.of(context).surface, child: child)));
+        // 定制：内嵌记账页（fitCategory）把「分类卡 + 明细行」放进同一个可滚动
+        // 区域 —— 卡片按内容收口、明细行紧贴其下；键盘或小屏把可用高度压到装不
+        // 下时由滚动吸收，不再出现 Bottom overflowed（红黑条）。
+        final Widget fitContent = SingleChildScrollView(
             key: const ValueKey('recording-content'),
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [category, if (authors != null) authors!])
-        : SingleChildScrollView(
+            keyboardDismissBehavior:
+                ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  categoryCard(Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [category, if (authors != null) authors!])),
+                  SizedBox(height: gap),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: details),
+                ]));
+        final Widget sheetContent = SingleChildScrollView(
             key: const ValueKey('recording-content'),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            keyboardDismissBehavior:
+                ScrollViewKeyboardDismissBehavior.onDrag,
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [category, if (authors != null) authors!]));
-    return Column(children: [
-      // Separate the segmented header from every amount card in both themes.
-      SizedBox(key: const ValueKey('recording-header-gap'), height: gap),
-      Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16), child: amount),
-      SizedBox(height: gap),
-      Expanded(
-          child: Column(children: [
-        Flexible(
-            fit: FlexFit.loose,
-            child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: ColoredBox(
-                        color: BeeCardTheme.of(context).surface,
-                        child: categoryContent)))),
-        SizedBox(height: gap),
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16), child: details),
-      ])),
-      Material(
-          color: transparentDock
-              ? Colors.transparent
-              : BeeCardTheme.of(context).canvas,
-          child: Padding(
-              key: const ValueKey('recording-dock'),
-              padding: EdgeInsets.fromLTRB(16, dense ? 6 : 8, 16, dense ? 10 : 12),
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (!keyboardVisible) keypad,
-                    SizedBox(height: compact && narrow ? 5 : 7),
-                    actions
-                  ])))
-    ]);
-  }
+        return Column(children: [
+          // Separate the segmented header from every amount card in both themes.
+          SizedBox(key: const ValueKey('recording-header-gap'), height: gap),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: amount),
+          SizedBox(height: gap),
+          Expanded(
+              child: fitCategory
+                  ? fitContent
+                  : Column(children: [
+                      Flexible(
+                          fit: FlexFit.loose,
+                          child: categoryCard(sheetContent)),
+                      SizedBox(height: gap),
+                      Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: details),
+                    ])),
+          Material(
+              color: transparentDock
+                  ? Colors.transparent
+                  : BeeCardTheme.of(context).canvas,
+              child: Padding(
+                  key: const ValueKey('recording-dock'),
+                  padding: EdgeInsets.fromLTRB(
+                      16, dense ? 6 : 8, 16, dense ? 10 : 12),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (showKeypad) keypad,
+                        SizedBox(height: compact && narrow ? 5 : 7),
+                        actions
+                      ])))
+        ]);
+      });
 }
 
 class RecordingActions extends StatelessWidget {

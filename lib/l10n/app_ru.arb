@@ -1946,6 +1946,7 @@
   "projectDays": "{days} дн.",
   "projectAll": "Все проекты",
   "projectEndedHint": "Проект попадает сюда, если последняя запись старше 30 дней",
+  "projectScopeHint": "Проекты привязаны к книге: при переключении видны только проекты этой книги",
   "@projectDays": {
     "placeholders": {
       "days": {

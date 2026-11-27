@@ -383,7 +383,6 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   // 备注框焦点节点
   final FocusNode _noteFocusNode = FocusNode();
   bool _noteFieldHasFocus = false;
-  bool _cardNoteExpanded = false;
 
   // 防重复提交标志
   bool _isSubmitting = false;
@@ -1456,31 +1455,14 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         conversion: _txCurrency() == ref.watch(currentLedgerCurrencyProvider)
             ? null
             : _buildCurrencySection(context));
-    final noteExpanded =
-        (!compact && !widget.denseLayout) || _cardNoteExpanded;
     final narrow = MediaQuery.sizeOf(context).width <= 340;
     final dateLabel =
         '${narrow ? '${_date.month}.${_date.day.toString().padLeft(2, '0')}' : DateFormat.MMMd(l10n.localeName).format(_date)}${ref.watch(showTransactionTimeProvider) ? ' ${_date.hour.toString().padLeft(2, '0')}:${_date.minute.toString().padLeft(2, '0')}' : ''}';
     Widget metadata(Widget? categoryAction) => RecordingDetailsCard(
           categoryAction: categoryAction,
-          noteExpanded: noteExpanded,
-          // 定制:denseLayout 下备注默认折叠,必须同时给出展开入口,
-          // 否则非紧凑屏(compact=false)会连按钮都没有,备注无法输入。
-          noteToggle: (compact || widget.denseLayout)
-              ? RecordingNoteToggle(
-                  key: const ValueKey('recording-note-compact'),
-                  label: l10n.commonNoteHint,
-                  expanded: noteExpanded,
-                  onTap: () {
-                    if (noteExpanded) _noteFocusNode.unfocus();
-                    setState(() => _cardNoteExpanded = !noteExpanded);
-                    if (!noteExpanded) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) _noteFocusNode.requestFocus();
-                      });
-                    }
-                  })
-              : null,
+          // 定制：备注行常驻（两排固定高度），点一下直接输入，不再有
+          // 「展开/收起」——展开会临时加高一行，把键盘上方挤爆出红黑条。
+          noteExpanded: true,
           note: RecordingNoteField(
               fieldKey: const ValueKey('recording-note'),
               focusNode: _noteFocusNode,
@@ -1517,11 +1499,10 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               : _buildProjectChip(context, l10n, projectTag, narrow),
           tags: Align(
               alignment: Alignment.centerRight,
-              widthFactor: noteExpanded ? null : 1,
               child: meta(
                   'recording-tags',
                   tags.isEmpty ? 'Tag' : '',
-                  compact && !noteExpanded ? '' : l10n.tagSelectTitle,
+                  l10n.tagSelectTitle,
                   _pickCardTags,
                   child: tags.isEmpty
                       ? null

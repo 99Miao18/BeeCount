@@ -18108,6 +18108,9 @@ abstract class AppLocalizations {
   /// No description provided for @projectEndedHint.
   String get projectEndedHint;
 
+  /// No description provided for @projectScopeHint.
+  String get projectScopeHint;
+
 
   /// No description provided for @transactionMoveChanged.
   ///

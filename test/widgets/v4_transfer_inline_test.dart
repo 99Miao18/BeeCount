@@ -556,8 +556,12 @@ void main() {
       final details = find.byType(RecordingDetailsCard);
       expect(tester.getRect(content).top - tester.getRect(amount).bottom,
           closeTo(8, .1));
-      expect(tester.getRect(details).top - tester.getRect(content).bottom,
-          closeTo(8, .1));
+      // 定制：明细行已经挪进分类区内部的滚动区域，紧贴分类卡下方，
+      // 不再钉在滚动区底边，所以只校验它落在滚动区内。
+      expect(tester.getRect(details).top,
+          greaterThan(tester.getRect(content).top));
+      expect(tester.getRect(details).bottom,
+          lessThanOrEqualTo(tester.getRect(content).bottom + .1));
       expect(
           tester.getRect(find.byKey(const ValueKey('recording-dock'))).bottom,
           closeTo(size.height, .1));

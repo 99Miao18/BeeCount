@@ -461,11 +461,8 @@ void main() {
       await open(tester,
           size: compactNote ? const Size(320, 568) : const Size(390, 844));
       tester.testTextInput.log.clear();
-      if (compactNote) {
-        await tester.tap(find.byKey(const ValueKey('recording-note-compact')));
-      } else {
-        await tester.tap(find.byKey(const ValueKey('recording-note')));
-      }
+      // 备注行现在常驻（不再有「展开」按钮），两种尺寸都直接点输入框。
+      await tester.tap(find.byKey(const ValueKey('recording-note')));
       await tester.pumpAndSettle();
       final note = find.byKey(const ValueKey('recording-note'));
       final field = tester.widget<TextField>(note);
@@ -1440,8 +1437,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getBottomRight(save).dy, bottom);
       expect(tester.getCenter(keypad).dy, keypadY);
-      final note = find.byKey(ValueKey(
-          size.height < 720 ? 'recording-note-compact' : 'recording-note'));
+      final note = find.byKey(const ValueKey('recording-note'));
       await tester.ensureVisible(note);
       await tester.tap(note);
       await tester.pump();

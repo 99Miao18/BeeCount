@@ -2164,6 +2164,7 @@
   "projectDays": "{days} 天",
   "projectAll": "全部項目",
   "projectEndedHint": "最後一筆超過 30 天自動歸到這裡，不用手動結束",
+  "projectScopeHint": "專案按帳本隔離：切到別的帳本，只顯示那個帳本的專案",
   "@projectDays": {
     "placeholders": {
       "days": {

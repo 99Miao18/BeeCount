@@ -9709,6 +9709,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get projectEndedHint => '마지막 거래가 30일을 넘으면 자동으로 이곳으로 이동합니다';
 
   @override
+  String get projectScopeHint => '프로젝트는 가계부별로 분리됩니다. 다른 가계부로 전환하면 해당 가계부의 프로젝트만 표시됩니다';
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override
