@@ -1716,6 +1716,8 @@
   "projectSectionActive": "진행 중",
   "projectSectionEnded": "종료됨",
   "projectDays": "{days}일",
+  "projectAll": "전체 프로젝트",
+  "projectEndedHint": "마지막 거래가 30일을 넘으면 자동으로 이곳으로 이동합니다",
   "@projectDays": {
     "placeholders": {
       "days": {

@@ -10,6 +10,7 @@ import '../../providers/project_providers.dart';
 import '../../services/project/project_tags.dart';
 import '../tag/detail/bindings/tag_detail.dart' show tagDetailColor;
 import 'project_edit_sheet.dart';
+import 'project_list_page.dart';
 
 /// 项目选择结果。用一个包装类区分「选了/清了」（[tagId] 为 null）
 /// 和「用户取消」（整个返回值为 null）。
@@ -51,14 +52,28 @@ class ProjectPickerSheet extends ConsumerWidget {
         title: l.projectPickTitle,
         footer: Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: BeeButton(
-                label: l.projectCreateTitle,
-                onPressed: () async {
-                  final tag = await ProjectEditSheet.show(context);
-                  if (tag != null && context.mounted) {
-                    Navigator.pop(context, ProjectPickResult(tag.id));
-                  }
-                })),
+            child: Row(children: [
+              TextButton.icon(
+                  onPressed: () {
+                    // 先关弹层再进列表，返回时直接回到记账页。
+                    final nav = Navigator.of(context);
+                    nav.pop();
+                    nav.push(MaterialPageRoute<void>(
+                        builder: (_) => const ProjectListPage()));
+                  },
+                  icon: const Icon(Icons.list_alt, size: 18),
+                  label: Text(l.projectAll)),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: BeeButton(
+                      label: l.projectCreateTitle,
+                      onPressed: () async {
+                        final tag = await ProjectEditSheet.show(context);
+                        if (tag != null && context.mounted) {
+                          Navigator.pop(context, ProjectPickResult(tag.id));
+                        }
+                      })),
+            ])),
         child: SizedBox(
             height: math.min(MediaQuery.sizeOf(context).height * .52, 380.0),
             child: usage.when(

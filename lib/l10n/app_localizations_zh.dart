@@ -9657,6 +9657,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get projectAll => '全部项目';
+
+  @override
+  String get projectEndedHint => '最后一笔超过 30 天自动归到这里，不用手动结束';
+
+  @override
   String get transactionMoveChanged => '账本或所选账单已变更，请刷新后重新选择。';
 
   @override
@@ -19233,6 +19239,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String projectDays(int days) {
     return '$days 天';
   }
+
+  @override
+  String get projectAll => '全部項目';
+
+  @override
+  String get projectEndedHint => '最後一筆超過 30 天自動歸到這裡，不用手動結束';
 
   @override
   String get transactionMoveChanged => '帳本或所選帳單已變更，請重新整理後再選擇。';

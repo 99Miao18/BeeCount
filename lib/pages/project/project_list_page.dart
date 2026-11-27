@@ -115,7 +115,8 @@ class ProjectListPage extends ConsumerWidget {
                               child: _tile(context, l, item, symbol, hide)),
                       ],
                       if (ended.isNotEmpty) ...[
-                        _sectionTitle(context, l.projectSectionEnded),
+                        _sectionTitle(context, l.projectSectionEnded,
+                            subtitle: l.projectEndedHint),
                         for (final item in ended)
                           Padding(
                               padding: const EdgeInsets.only(bottom: 10),
@@ -134,13 +135,22 @@ class ProjectListPage extends ConsumerWidget {
     ]));
   }
 
-  Widget _sectionTitle(BuildContext context, String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
-      child: Text(text,
-          style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).hintColor)));
+  Widget _sectionTitle(BuildContext context, String text, {String? subtitle}) =>
+      Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(text,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).hintColor)),
+            if (subtitle != null)
+              Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 11, color: Theme.of(context).hintColor)))
+          ]));
 
   Widget _tile(BuildContext context, AppLocalizations l, ProjectUsage item,
       String symbol, bool hide) {

@@ -38,14 +38,14 @@ class RecordingFrame extends StatelessWidget {
             : compact && narrow
                 ? 6.0
                 : 8.0;
+    // 定制：分类卡按内容高度收口（不再撑满整段空白）。收缩后剩下的高度
+    // 由下方明细行之后的空间吸收，备注行因此整体上移，贴近分类卡。
     final categoryContent = fitCategory
         ? Column(
             key: const ValueKey('recording-content'),
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-                Expanded(child: category),
-                if (authors != null) authors!
-              ])
+            children: [category, if (authors != null) authors!])
         : SingleChildScrollView(
             key: const ValueKey('recording-content'),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -59,16 +59,20 @@ class RecordingFrame extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16), child: amount),
       SizedBox(height: gap),
       Expanded(
-          child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: ColoredBox(
-                      color: BeeCardTheme.of(context).surface,
-                      child: categoryContent)))),
-      SizedBox(height: gap),
-      Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16), child: details),
+          child: Column(children: [
+        Flexible(
+            fit: FlexFit.loose,
+            child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: ColoredBox(
+                        color: BeeCardTheme.of(context).surface,
+                        child: categoryContent)))),
+        SizedBox(height: gap),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16), child: details),
+      ])),
       Material(
           color: transparentDock
               ? Colors.transparent

@@ -18102,6 +18102,12 @@ abstract class AppLocalizations {
   /// No description provided for @projectDays.
   String projectDays(int days);
 
+  /// No description provided for @projectAll.
+  String get projectAll;
+
+  /// No description provided for @projectEndedHint.
+  String get projectEndedHint;
+
 
   /// No description provided for @transactionMoveChanged.
   ///

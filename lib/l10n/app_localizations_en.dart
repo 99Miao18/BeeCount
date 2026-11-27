@@ -9703,6 +9703,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get projectAll => 'All projects';
+
+  @override
+  String get projectEndedHint => 'Moves here automatically once the last bill is over 30 days old';
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override

@@ -10157,6 +10157,12 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get projectAll => 'Все проекты';
+
+  @override
+  String get projectEndedHint => 'Проект попадает сюда, если последняя запись старше 30 дней';
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override

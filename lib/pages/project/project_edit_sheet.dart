@@ -27,6 +27,10 @@ class ProjectEditSheet extends ConsumerStatefulWidget {
           context: context,
           isScrollControlled: true,
           useSafeArea: true,
+          // 键盘弹起时 BeeSheet 会垫上 viewInsets；限高后剩余内容改为滚动，
+          // 否则色板 + 保存键会顶出屏幕（Bottom overflowed）。
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * .86),
           backgroundColor: BeeCardTheme.of(context).overlay,
           shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
@@ -94,10 +98,14 @@ class _ProjectEditSheetState extends ConsumerState<ProjectEditSheet> {
             padding: const EdgeInsets.only(top: 12),
             child: BeeButton(
                 label: l.commonSave, onPressed: _saving ? null : _save)),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: SingleChildScrollView(
+            // 色板三行，小屏 + 键盘时必须能滚，不能溢出到红黑条。
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
               BeeSurface(
                   child: Row(children: [
                 Container(
@@ -156,6 +164,6 @@ class _ProjectEditSheetState extends ConsumerState<ProjectEditSheet> {
                             ? null
                             : (value) => setState(() => _color = value))
                   ])),
-            ]));
+            ])));
   }
 }

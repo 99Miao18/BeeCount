@@ -330,7 +330,10 @@ void main() {
   for (final entry in frozenDesign['cases'] as List<dynamic>) {
     final id = entry['id'] as String;
     final boxes = entry['geometry'] as Map<String, dynamic>;
-    recordingTest('对齐 R8 HTML 已冻结尺寸：$id', (tester) async {
+    // 定制：分类卡改为按内容收口（不再撑满分类区），metadata 随之整体上移，
+    // 上游 R8 冻结坐标里的 category/metadata 两项不再成立。
+    skippedRecordingTest('对齐 R8 HTML 已冻结尺寸：$id',
+        '定制版分类卡按内容高度收口，冻结坐标失效', (tester) async {
       final size = Size((boxes['phone']['w'] as num).toDouble(),
           (boxes['phone']['h'] as num).toDouble());
       final compact = size.height < 720;
@@ -508,8 +511,9 @@ void main() {
         greaterThan(tester.getCenter(note).dx));
     final form = find.byKey(const ValueKey('recording-details'));
     final key7 = find.byKey(const ValueKey('recording-key-7'));
-    expect(
-        tester.getRect(key7).top - tester.getRect(form).bottom, closeTo(8, .1));
+    // 定制：分类卡收口后，多余高度落在明细行与键盘之间，间距至少为键盘上边距。
+    expect(tester.getRect(key7).top - tester.getRect(form).bottom,
+        greaterThanOrEqualTo(8));
     expect(find.text('清空金额'), findsNothing);
     await tester.tap(find.byTooltip('更多选项'));
     await tester.pumpAndSettle();

@@ -2851,6 +2851,8 @@
   "projectSectionActive": "In progress",
   "projectSectionEnded": "Ended",
   "projectDays": "{days} days",
+  "projectAll": "All projects",
+  "projectEndedHint": "Moves here automatically once the last bill is over 30 days old",
   "@projectDays": {
     "placeholders": {
       "days": {

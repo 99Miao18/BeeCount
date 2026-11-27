@@ -579,6 +579,8 @@ class _RecordingCategorySectionState
       padding: EdgeInsets.symmetric(
           horizontal: horizontalPadding, vertical: verticalPadding),
       child: Column(
+        // 定制：卡片按两排格子收口，由外层决定留白，避免整段大白块。
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ...gridRows,

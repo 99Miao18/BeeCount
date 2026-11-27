@@ -2714,6 +2714,8 @@
   "projectSectionActive": "进行中",
   "projectSectionEnded": "已结束",
   "projectDays": "{days} 天",
+  "projectAll": "全部项目",
+  "projectEndedHint": "最后一笔超过 30 天自动归到这里，不用手动结束",
   "@projectDays": {
     "placeholders": {
       "days": {

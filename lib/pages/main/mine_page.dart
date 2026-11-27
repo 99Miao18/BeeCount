@@ -20,6 +20,7 @@ import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
 import '../report/annual_report_page.dart';
 import '../donation/donation_page.dart';
+import '../project/project_list_page.dart';
 
 class MinePage extends ConsumerWidget {
   const MinePage({super.key});
@@ -82,6 +83,8 @@ class MinePage extends ConsumerWidget {
                       () => open(const SmartBillingPage())),
                   row(l.dataManagement, l.dataManagementDesc, 'Database',
                       () => open(const DataManagementPage())),
+                  row(l.projectTitle, l.projectSubtitle, 'FolderOpen',
+                      () => open(const ProjectListPage())),
                   row(l.automation, l.automationDesc, 'Clock',
                       () => open(const AutomationPage())),
                   row(l.appearanceSettings, l.appearanceSettingsDesc, 'Palette',

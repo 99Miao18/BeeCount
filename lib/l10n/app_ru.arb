@@ -1944,6 +1944,8 @@
   "projectSectionActive": "В работе",
   "projectSectionEnded": "Завершённые",
   "projectDays": "{days} дн.",
+  "projectAll": "Все проекты",
+  "projectEndedHint": "Проект попадает сюда, если последняя запись старше 30 дней",
   "@projectDays": {
     "placeholders": {
       "days": {

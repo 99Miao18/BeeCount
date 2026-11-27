@@ -9703,6 +9703,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get projectAll => '전체 프로젝트';
+
+  @override
+  String get projectEndedHint => '마지막 거래가 30일을 넘으면 자동으로 이곳으로 이동합니다';
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override
