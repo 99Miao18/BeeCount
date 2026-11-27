@@ -263,6 +263,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                             : AmountEditorSheet(
                                 key: _cardEditorKey,
                                 cardLayout: true,
+                                denseLayout: widget.embedded,
                                 systemKeyboardVisible:
                                     // Some floating/minimized IMEs report a
                                     // 1px inset without covering the editor.

@@ -201,7 +201,8 @@ class _RecordingCategorySectionState
   /// 弹层里不列「父分类本身」：有二级的分类必须落到二级，否则同一笔支出
   /// 会在一级、二级两种口径下混记，年度统计对不上。
   Future<void> _openChildren(Category parent, List<Category> children) async {
-    final height = _childrenSheetHeight(context, children.length);
+    // 与「更多分类」弹层保持同一高度：二级只有两三项时不再缩成一条矮抽屉。
+    final height = MediaQuery.sizeOf(context).height * .65;
     final picked = await showBeeSheet<Category>(
       context,
       title: CategoryUtils.getDisplayName(parent.name, context),
@@ -239,16 +240,6 @@ class _RecordingCategorySectionState
     }
   }
 
-  /// 二级弹层的目标高度：按 4 个一行估算行数，夹在 140 与屏高 60% 之间。
-  double _childrenSheetHeight(BuildContext context, int count) {
-    final rows = (count / 4).ceil().clamp(1, 6);
-    final natural = rows * RecordingSubcategoryGrid.minimumItemHeight +
-        (rows - 1) * RecordingSubcategoryGrid.spacing +
-        20;
-    final maxHeight = MediaQuery.sizeOf(context).height * .6;
-    return natural.clamp(140.0, maxHeight).toDouble();
-  }
-
   /// 记账页分类区：固定「4 列 × 2 排」，第 8 格恒为「更多」。
   ///
   /// 定制（需求 1 + 2）：
@@ -277,7 +268,7 @@ class _RecordingCategorySectionState
     }
     String label(Category category) =>
         CategoryUtils.getDisplayName(category.name, context);
-    final verticalPadding = narrow ? 2.0 : 10.0;
+    final verticalPadding = narrow ? 2.0 : 6.0;
     final width = math.max(0.0, box.maxWidth - 2 * horizontalPadding);
     final useFiveColumns = widget.preferredColumns == denseColumns &&
         width >= denseColumns * kMinInteractiveDimension;

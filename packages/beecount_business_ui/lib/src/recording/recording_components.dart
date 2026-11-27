@@ -423,8 +423,12 @@ class RecordingKeypad extends StatelessWidget {
       required this.onBackspace,
       required this.onClear,
       required this.deleteLabel,
-      this.compact = false});
+      this.compact = false,
+      this.rowHeight});
   final bool compact;
+
+  /// 定制:紧凑布局下由宿主指定行高,把省下的高度让给分类区第二排。
+  final double? rowHeight;
   final ValueChanged<String> onDigit;
   final ValueChanged<String> onOperator;
   final VoidCallback onBackspace;
@@ -496,7 +500,7 @@ class RecordingKeypad extends StatelessWidget {
                                     ? onOperator(value)
                                     : onDigit(value),
                             child: SizedBox(
-                                height: compact ? 44 : 46,
+                                height: rowHeight ?? (compact ? 44 : 46),
                                 child: Center(
                                     child: value == '⌫'
                                         ? const BeeLineIcon('Delete', size: 20)

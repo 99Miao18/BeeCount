@@ -19,18 +19,25 @@ class RecordingFrame extends StatelessWidget {
       this.keyboardVisible = false,
       this.transparentDock = false,
       this.fitCategory = false,
-      this.transfer = false});
+      this.transfer = false,
+      this.dense = false});
   final Widget amount, category, details, keypad, actions;
   final Widget? authors;
   final bool compact, narrow, keyboardVisible, transparentDock, fitCategory;
+
+  /// 定制:内嵌记账页需要给分类区腾出第二排,启用后只收紧间距与底部内边距
+  /// (合计约 8px),方块与键盘按键本身不缩放。由宿主的 [keypad] 自行配合。
+  final bool dense;
   final bool transfer;
   @override
   Widget build(BuildContext context) {
-    final gap = transfer
-        ? 8.0
-        : compact && narrow
-            ? 6.0
-            : 8.0;
+    final gap = dense
+        ? 6.0
+        : transfer
+            ? 8.0
+            : compact && narrow
+                ? 6.0
+                : 8.0;
     final categoryContent = fitCategory
         ? Column(
             key: const ValueKey('recording-content'),
@@ -68,7 +75,7 @@ class RecordingFrame extends StatelessWidget {
               : BeeCardTheme.of(context).canvas,
           child: Padding(
               key: const ValueKey('recording-dock'),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: EdgeInsets.fromLTRB(16, dense ? 6 : 8, 16, dense ? 10 : 12),
               child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,

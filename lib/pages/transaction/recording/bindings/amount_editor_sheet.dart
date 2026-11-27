@@ -295,6 +295,10 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final String? fixedCurrencyCode;
   final String? blockedSubmitLabel;
 
+  /// 定制:内嵌记账页(底部 tab)专用。开启后备注行默认折叠、键盘行高与间距
+  /// 各收一点,把约 60px 还给分类区,才能稳定显示两排分类。
+  final bool denseLayout;
+
   const AmountEditorSheet({
     super.key,
     required this.categoryName,
@@ -324,6 +328,7 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialNativeAmount,
     this.fixedCurrencyCode,
     this.blockedSubmitLabel,
+    this.denseLayout = false,
   });
 
   @override
@@ -1313,7 +1318,8 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         conversion: _txCurrency() == ref.watch(currentLedgerCurrencyProvider)
             ? null
             : _buildCurrencySection(context));
-    final noteExpanded = !compact || _cardNoteExpanded;
+    final noteExpanded =
+        (!compact && !widget.denseLayout) || _cardNoteExpanded;
     final narrow = MediaQuery.sizeOf(context).width <= 340;
     final dateLabel =
         '${narrow ? '${_date.month}.${_date.day.toString().padLeft(2, '0')}' : DateFormat.MMMd(l10n.localeName).format(_date)}${ref.watch(showTransactionTimeProvider) ? ' ${_date.hour.toString().padLeft(2, '0')}:${_date.minute.toString().padLeft(2, '0')}' : ''}';
@@ -1401,6 +1407,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             details: details,
             category: widget.categorySection ?? const SizedBox.shrink(),
             fitCategory: fallback != null,
+            dense: widget.denseLayout,
             authors: widget.editingTransactionId == null
                 ? null
                 : _TxAuthorAvatars(
@@ -1412,6 +1419,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             transparentDock: PageSkinBackdropScope.contains(context),
             keypad: RecordingKeypad(
                 compact: compact,
+                rowHeight: widget.denseLayout ? 40 : null,
                 onDigit: _append,
                 onOperator: applyOp,
                 onBackspace: _backspace,
