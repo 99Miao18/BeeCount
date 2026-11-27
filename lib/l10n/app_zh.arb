@@ -2709,6 +2709,18 @@
   "projectDeleteConfirmTitle": "删除项目",
   "projectDeleteConfirmMessage": "「{name}」会被删除，项目里的账单会保留，只去掉项目归属。",
   "projectForeignNotice": "含外币账单，金额按交易币种原值合计",
+  "projectPickTitle": "选择项目",
+  "projectClearSelection": "不归入项目",
+  "projectSectionActive": "进行中",
+  "projectSectionEnded": "已结束",
+  "projectDays": "{days} 天",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "{count}笔",
   "@tagTransactionCount": {
     "placeholders": {

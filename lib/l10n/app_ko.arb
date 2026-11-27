@@ -1711,6 +1711,18 @@
   "projectDeleteConfirmTitle": "Delete project",
   "projectDeleteConfirmMessage": "Delete project \"{name}\"? Its transactions are kept and only lose the project link.",
   "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
+  "projectPickTitle": "프로젝트 선택",
+  "projectClearSelection": "프로젝트 없음",
+  "projectSectionActive": "진행 중",
+  "projectSectionEnded": "종료됨",
+  "projectDays": "{days}일",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "거래 {count}건",
   "tagDetailTitle": "태그 상세",
   "tagDetailTotalCount": "거래 수",

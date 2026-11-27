@@ -18087,6 +18087,21 @@ abstract class AppLocalizations {
   /// No description provided for @projectForeignNotice.
   String get projectForeignNotice;
 
+  /// No description provided for @projectPickTitle.
+  String get projectPickTitle;
+
+  /// No description provided for @projectClearSelection.
+  String get projectClearSelection;
+
+  /// No description provided for @projectSectionActive.
+  String get projectSectionActive;
+
+  /// No description provided for @projectSectionEnded.
+  String get projectSectionEnded;
+
+  /// No description provided for @projectDays.
+  String projectDays(int days);
+
 
   /// No description provided for @transactionMoveChanged.
   ///

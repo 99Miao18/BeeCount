@@ -210,10 +210,15 @@ class RecordingDetailsCard extends StatelessWidget {
       this.account,
       this.noteToggle,
       this.categoryAction,
+      this.project,
       this.noteExpanded = true});
   final Widget note, date, tags, attachment;
   final Widget? account, noteToggle;
   final Widget? categoryAction;
+
+  /// 定制：账单的可选归属项目（记账页标签行里的独立 chip）。
+  /// 纯展示槽位，选中态与数据由宿主维护。
+  final Widget? project;
   final bool noteExpanded;
 
   @override
@@ -244,6 +249,10 @@ class RecordingDetailsCard extends StatelessWidget {
                 const SizedBox(width: 4),
               if (categoryAction == null) date else Flexible(child: date),
               const SizedBox(width: 4),
+              if (project != null) ...[
+                project!,
+                const SizedBox(width: 4),
+              ],
               if (noteExpanded || account == null || categoryAction != null)
                 Expanded(child: tags)
               else

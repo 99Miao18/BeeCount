@@ -30,6 +30,35 @@ class ProjectListPage extends ConsumerWidget {
     return a == b ? a : '$a – $b';
   }
 
+  /// 项目跨度天数（首末两笔按自然日算，同一天 = 1 天）。
+  int? _days(DateTime? first, DateTime? last) {
+    if (first == null || last == null) return null;
+    final a = DateTime(first.year, first.month, first.day);
+    final b = DateTime(last.year, last.month, last.day);
+    return b.difference(a).inDays + 1;
+  }
+
+  /// 「已结束」= 最后一笔距今超过 [endedAfterDays] 天。纯派生规则，不写库，
+  /// 因此两台手机、重装后算出来的分组都一致；没有账单的新项目算进行中。
+  static const endedAfterDays = 30;
+
+  bool _isEnded(ProjectUsage item) {
+    final last = item.lastAt;
+    if (last == null) return false;
+    final today = DateTime.now();
+    final base = DateTime(today.year, today.month, today.day);
+    final day = DateTime(last.year, last.month, last.day);
+    return base.difference(day).inDays > endedAfterDays;
+  }
+
+  int _byRecent(ProjectUsage a, ProjectUsage b) {
+    final la = a.lastAt, lb = b.lastAt;
+    if (la == null && lb == null) return 0;
+    if (la == null) return -1; // 还没记账的项目排在最前
+    if (lb == null) return 1;
+    return lb.compareTo(la);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
@@ -70,28 +99,48 @@ class ProjectListPage extends ConsumerWidget {
                           label: l.v4RecordingRetry,
                           onPressed: () =>
                               ref.invalidate(projectUsageProvider)))),
-              data: (rows) => rows.isEmpty
-                  ? empty
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(17, 4, 17, 28),
-                      children: [
-                          for (final item in rows)
-                            Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _tile(
-                                    context, l, item, symbol, hide)),
-                          if (hasForeign)
-                            Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(l.projectForeignNotice,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            Theme.of(context).hintColor))),
-                        ]))),
+              data: (rows) {
+                final active = rows.where((row) => !_isEnded(row)).toList()
+                  ..sort(_byRecent);
+                final ended = rows.where(_isEnded).toList()..sort(_byRecent);
+                if (rows.isEmpty) return empty;
+                return ListView(
+                    padding: const EdgeInsets.fromLTRB(17, 4, 17, 28),
+                    children: [
+                      if (active.isNotEmpty) ...[
+                        _sectionTitle(context, l.projectSectionActive),
+                        for (final item in active)
+                          Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _tile(context, l, item, symbol, hide)),
+                      ],
+                      if (ended.isNotEmpty) ...[
+                        _sectionTitle(context, l.projectSectionEnded),
+                        for (final item in ended)
+                          Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _tile(context, l, item, symbol, hide)),
+                      ],
+                      if (hasForeign)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(l.projectForeignNotice,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Theme.of(context).hintColor))),
+                    ]);
+              })),
     ]));
   }
+
+  Widget _sectionTitle(BuildContext context, String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).hintColor)));
 
   Widget _tile(BuildContext context, AppLocalizations l, ProjectUsage item,
       String symbol, bool hide) {
@@ -99,8 +148,10 @@ class ProjectListPage extends ConsumerWidget {
     final color = tagDetailColor(item.tag.color, theme.colorScheme.primary);
     final name = ProjectTags.displayName(item.tag.name);
     final foreign = item.foreignCount > 0;
+    final days = _days(item.firstAt, item.lastAt);
     final subtitle = [
       l.tagTransactionCount(item.transactionCount),
+      if (days != null) l.projectDays(days),
       _range(item.firstAt, item.lastAt),
     ].where((part) => part.isNotEmpty).join(' · ');
     final amount = foreign

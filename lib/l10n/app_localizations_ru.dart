@@ -10140,6 +10140,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectForeignNotice => 'Includes bills in other currencies; totals are summed in their original currency';
 
   @override
+  String get projectPickTitle => 'Выбрать проект';
+
+  @override
+  String get projectClearSelection => 'Без проекта';
+
+  @override
+  String get projectSectionActive => 'В работе';
+
+  @override
+  String get projectSectionEnded => 'Завершённые';
+
+  @override
+  String projectDays(int days) {
+    return '$days дн.';
+  }
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override

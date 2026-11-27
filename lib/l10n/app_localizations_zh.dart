@@ -9640,6 +9640,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get projectForeignNotice => '含外币账单，金额按交易币种原值合计';
 
   @override
+  String get projectPickTitle => '选择项目';
+
+  @override
+  String get projectClearSelection => '不归入项目';
+
+  @override
+  String get projectSectionActive => '进行中';
+
+  @override
+  String get projectSectionEnded => '已结束';
+
+  @override
+  String projectDays(int days) {
+    return '$days 天';
+  }
+
+  @override
   String get transactionMoveChanged => '账本或所选账单已变更，请刷新后重新选择。';
 
   @override
@@ -19199,6 +19216,23 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   String get projectForeignNotice => '含外幣帳單，金額按交易幣種原值合計';
+
+  @override
+  String get projectPickTitle => '選擇項目';
+
+  @override
+  String get projectClearSelection => '不歸入項目';
+
+  @override
+  String get projectSectionActive => '進行中';
+
+  @override
+  String get projectSectionEnded => '已結束';
+
+  @override
+  String projectDays(int days) {
+    return '$days 天';
+  }
 
   @override
   String get transactionMoveChanged => '帳本或所選帳單已變更，請重新整理後再選擇。';

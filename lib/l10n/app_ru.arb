@@ -1939,6 +1939,18 @@
   "projectDeleteConfirmTitle": "Delete project",
   "projectDeleteConfirmMessage": "Delete project \"{name}\"? Its transactions are kept and only lose the project link.",
   "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
+  "projectPickTitle": "Выбрать проект",
+  "projectClearSelection": "Без проекта",
+  "projectSectionActive": "В работе",
+  "projectSectionEnded": "Завершённые",
+  "projectDays": "{days} дн.",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "{count} шт.",
   "tagDetailTitle": "Сведения о теге",
   "tagDetailTotalCount": "Транзакции",

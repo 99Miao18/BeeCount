@@ -2157,6 +2157,18 @@
   "projectDeleteConfirmTitle": "刪除項目",
   "projectDeleteConfirmMessage": "「{name}」會被刪除，項目裡的帳單會保留，只去掉項目歸屬。",
   "projectForeignNotice": "含外幣帳單，金額按交易幣種原值合計",
+  "projectPickTitle": "選擇項目",
+  "projectClearSelection": "不歸入項目",
+  "projectSectionActive": "進行中",
+  "projectSectionEnded": "已結束",
+  "projectDays": "{days} 天",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "{count}筆",
     "@tagTransactionCount": {
         "placeholders": {

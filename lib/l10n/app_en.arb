@@ -2846,6 +2846,18 @@
     }
   },
   "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
+  "projectPickTitle": "Choose project",
+  "projectClearSelection": "No project",
+  "projectSectionActive": "In progress",
+  "projectSectionEnded": "Ended",
+  "projectDays": "{days} days",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "{count} transactions",
   "@tagTransactionCount": {
     "placeholders": {

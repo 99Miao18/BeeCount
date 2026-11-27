@@ -9686,6 +9686,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get projectForeignNotice => 'Includes bills in other currencies; totals are summed in their original currency';
 
   @override
+  String get projectPickTitle => '프로젝트 선택';
+
+  @override
+  String get projectClearSelection => '프로젝트 없음';
+
+  @override
+  String get projectSectionActive => '진행 중';
+
+  @override
+  String get projectSectionEnded => '종료됨';
+
+  @override
+  String projectDays(int days) {
+    return '$days일';
+  }
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override
