@@ -153,7 +153,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
                           value: _icon,
                           enabled: !_busy,
                           loading: _picking,
-                          initialGroupId: isEditing ? null : '',
+                          locateByValue: isEditing,
                           groups: [
                             for (var i = 0; i < groups.length; i++)
                               BeeCategoryIconGroup(
@@ -168,37 +168,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
                                           items: s.iconKeys.map(choice).toList())
                                   ])
                           ],
-                          commonItems: (widget.kind == 'expense'
-                                  ? [
-                                      'color:Utensils',
-                                      'color:Coffee',
-                                      'color:ShoppingCart',
-                                      'color:ShoppingBasket',
-                                      'color:TrainFront',
-                                      'color:Car',
-                                      'color:House',
-                                      'color:Zap',
-                                      'color:Smartphone',
-                                      'color:HeartPulse',
-                                      'color:Clapperboard',
-                                      'color:Gift'
-                                    ]
-                                  : [
-                                      'color:BriefcaseBusiness',
-                                      'color:Banknote',
-                                      'color:Landmark',
-                                      'color:PiggyBank',
-                                      'color:TrendingUp',
-                                      'color:Coins',
-                                      'color:Wallet',
-                                      'color:Gift',
-                                      'color:Trophy',
-                                      'color:ReceiptText',
-                                      'color:Store',
-                                      'color:Calendar'
-                                    ])
-                              .map(choice)
-                              .toList(),
+                          commonItems: const [],
                           presetLabel: l.v4CategoryPresetIcons,
                           customLabel: l.categoryCustomIconTitle,
                           commonLabel: l.v4CategoryCommonIcons,

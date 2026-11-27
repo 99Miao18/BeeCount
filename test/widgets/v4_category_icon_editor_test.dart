@@ -16,23 +16,32 @@ void main() {
             .readAsStringSync()) as Map;
     for (final kind in ['expense', 'income']) {
       final groups = categoryEditorIconGroups(AppLocalizationsZh(), kind);
-      expect(groups.first.colored, isTrue, reason: '彩色组排在最前');
-      // 彩色图标按场景分段，否则几十个图标平铺在一个 tab 里根本找不到。
-      final colorful = groups.first;
-      expect(colorful.sections.length, greaterThan(5),
-          reason: '彩色组要分成多个场景段');
-      for (final section in colorful.sections) {
-        expect(section.label, isNotEmpty, reason: '每个场景段都要有标题');
-        expect(section.iconKeys, isNotEmpty, reason: section.label);
-      }
+      var colorKeys = 0;
       for (final group in groups) {
         expect(group.iconKeys, isNotEmpty, reason: group.label);
-        // 同一分组内不允许两个格子画出同一个图标——这正是旧版的问题。
-        final glyphs = group.iconKeys.map(CategoryIconStyle.glyphOf).toList();
-        expect(glyphs.toSet().length, glyphs.length,
-            reason: '${group.label} 分组内有重复图标');
+        // 每个场景一段：彩色排在前、单色接在后面，同一个 tab 里一屏找完。
+        expect(group.sections.length, greaterThanOrEqualTo(2),
+            reason: '${group.label} 应该有彩色段和单色段');
+        expect(
+            group.sections.first.iconKeys.every((k) => k.startsWith('color:')),
+            isTrue,
+            reason: '${group.label} 的彩色段必须排在最前');
+        for (final section in group.sections.skip(1)) {
+          expect(
+              section.iconKeys.every((k) => !k.startsWith('color:')), isTrue,
+              reason: '${group.label} 的单色段混入了彩色键');
+        }
+        // 同一段内不允许两个格子画出同一个图标（旧版的问题）；彩色与单色
+        // 画出同一个 glyph 是正常的，不算重复。
+        for (final section in group.sections) {
+          final glyphs =
+              section.iconKeys.map(CategoryIconStyle.glyphOf).toList();
+          expect(glyphs.toSet().length, glyphs.length,
+              reason: '${group.label} 段内有重复图标');
+        }
         for (final key in group.iconKeys) {
           if (CategoryIconStyle.isColored(key)) {
+            colorKeys++;
             expect(CategoryIconStyle.accentOf(key), isNotNull,
                 reason: '$key 缺少强调色');
             expect(CategoryIconStyle.glyphOf(key), isNot('Shapes'),
@@ -47,6 +56,7 @@ void main() {
               reason: '$glyph 未打包进 beecount_ui');
         }
       }
+      expect(colorKeys, 94, reason: '彩色图标一个不少地分摊到各场景');
     }
     // 老版本存下的 icon 值必须继续有效，否则升级后分类图标会集体变灰。
     final legacy = <String>{

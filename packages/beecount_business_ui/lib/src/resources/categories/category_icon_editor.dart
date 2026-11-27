@@ -47,7 +47,7 @@ class BeeCategoryIconEditor extends StatefulWidget {
     required this.onChanged,
     required this.onChooseImage,
     this.preview,
-    this.initialGroupId,
+    this.locateByValue = true,
     this.loading = false,
     this.enabled = true,
   });
@@ -65,9 +65,9 @@ class BeeCategoryIconEditor extends StatefulWidget {
   final VoidCallback onChooseImage;
   final Widget? preview;
 
-  /// 打开时停靠的分组 id；为空时按 [value] 所在分组定位（新建分类可传 '' 直接
-  /// 停在常用组，而不是被占位图标带到别处）。
-  final String? initialGroupId;
+  /// 是否按 [value] 自动定位到所在分组；新建分类时图标还是占位值，可以关掉
+  /// 直接停在第一组，避免被占位值带到别的分组。
+  final bool locateByValue;
   final bool loading, enabled;
 
   @override
@@ -79,10 +79,8 @@ class _BeeCategoryIconEditorState extends State<BeeCategoryIconEditor> {
   @override
   void initState() {
     super.initState();
-    final forced = widget.initialGroupId;
-    if (forced != null) {
-      group = forced;
-    } else if (!widget.commonItems.any((item) => item.value == widget.value)) {
+    if (widget.locateByValue &&
+        !widget.commonItems.any((item) => item.value == widget.value)) {
       for (final candidate in widget.groups) {
         final hit = candidate.effectiveSections
             .any((s) => s.items.any((item) => item.value == widget.value));
@@ -97,8 +95,10 @@ class _BeeCategoryIconEditorState extends State<BeeCategoryIconEditor> {
   @override
   Widget build(BuildContext context) {
     final all = [
-      BeeCategoryIconGroup(
-          id: '', label: widget.commonLabel, items: widget.commonItems),
+      // 常用栏可以不配；为空时整栏不出现，避免留下一个空 tab。
+      if (widget.commonItems.isNotEmpty)
+        BeeCategoryIconGroup(
+            id: '', label: widget.commonLabel, items: widget.commonItems),
       ...widget.groups
     ];
     final active =
@@ -168,7 +168,7 @@ class _BeeCategoryIconEditorState extends State<BeeCategoryIconEditor> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Text(sections[i].label, style: captionStyle)),
                   ] else if (i > 0)
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                   grid(sections[i]),
                 ]
               ]);
