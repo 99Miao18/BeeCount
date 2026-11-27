@@ -13,6 +13,7 @@ import 'analytics/bindings/analytics_data.dart';
 import 'analytics/widgets/analytics_content.dart';
 import '../shared/scaffold/widgets/page_scaffold.dart';
 import '../shared/selectors/ledger_picker_sheet.dart';
+import '../shared/branding/bee_artwork.dart';
 import '../../utils/format_utils.dart';
 part 'analytics/bindings/analytics_actions.dart';
 
