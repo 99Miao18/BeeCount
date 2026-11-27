@@ -25,6 +25,7 @@ import '../../../attachment/attachment_preview_page.dart';
 import '../../../transaction/detail/bindings/transaction_receipt_dialog.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../services/attachment_service.dart';
+import '../../../../services/project/project_tags.dart';
 import '../../../../utils/month_range.dart';
 import '../../../shared/transactions/bindings/transaction_list_metadata.dart';
 import '../../../../models/home_transaction_preview.dart';
@@ -648,7 +649,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
                       // 获取该交易的标签（优先使用预加载数据）
                       final transactionTags = _getTagsForTransaction(it.t.id);
                       final tagsList = transactionTags
-                          .map((t) => (id: t.id, name: t.name, color: t.color))
+                          .map((t) => (
+                                id: t.id,
+                                name: ProjectTags.displayName(t.name),
+                                color: t.color
+                              ))
                           .toList();
 
                       // 转账账户信息

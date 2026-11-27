@@ -23,6 +23,9 @@ class BeeTagPicker extends StatefulWidget {
       this.onSelectionChanged,
       this.recent = const [],
       this.recentLabel,
+      this.pinned = const [],
+      this.pinnedLabel,
+      this.pinnedExclusive = false,
       this.allLabel,
       this.placeholder,
       this.footer,
@@ -30,6 +33,10 @@ class BeeTagPicker extends StatefulWidget {
       this.disabledIds = const {},
       this.compact = false});
   final List<BeeTagData> tags, recent;
+
+  /// 置顶分组（如「项目」）。这些 id 从 [tags] / [recent] 里自动剔除，避免重复。
+  /// [pinnedExclusive] 为真时该组按单选处理：点新的会顶掉旧的。
+  final List<BeeTagData> pinned;
   final Set<String> initial;
   final Set<String> disabledIds;
   final Set<String>? selection;
@@ -38,9 +45,9 @@ class BeeTagPicker extends StatefulWidget {
   final ValueChanged<Set<String>> onConfirm;
   final ValueChanged<Set<String>>? onSelectionChanged;
   final VoidCallback? onCreate;
-  final String? createLabel, selectionLabel, recentLabel, allLabel;
+  final String? createLabel, selectionLabel, recentLabel, pinnedLabel, allLabel;
   final Widget? placeholder, footer;
-  final bool confirmEnabled, compact;
+  final bool confirmEnabled, compact, pinnedExclusive;
   @override
   State<BeeTagPicker> createState() => _BeeTagPickerState();
 }
@@ -60,7 +67,8 @@ class _BeeTagPickerState extends State<BeeTagPicker> {
     widget.onSelectionChanged?.call(Set.unmodifiable(next));
   }
 
-  Widget _group(List<BeeTagData> items, String? label) =>
+  Widget _group(List<BeeTagData> items, String? label,
+          {Set<String>? exclusiveIds}) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (label != null)
           Padding(
@@ -79,17 +87,32 @@ class _BeeTagPickerState extends State<BeeTagPicker> {
                     enabled: !widget.disabledIds.contains(t.id),
                     onTap: () {
                       final next = {...selected};
-                      if (!next.remove(t.id)) next.add(t.id);
+                      if (exclusiveIds != null) {
+                        // 单选组：先摘掉整组已选项（含被搜索过滤掉的），
+                        // 再把被点的项做开关，避免搜到 B 时 A 还残留。
+                        final wasSelected = next.contains(t.id);
+                        next.removeAll(exclusiveIds);
+                        if (!wasSelected) next.add(t.id);
+                      } else if (!next.remove(t.id)) {
+                        next.add(t.id);
+                      }
                       _change(next);
                     }))
                 .toList()),
       ]);
   @override
   Widget build(BuildContext context) {
-    final items = widget.tags
-        .where(
-            (t) => t.label.toLowerCase().contains(query.trim().toLowerCase()))
+    bool match(BeeTagData t) =>
+        t.label.toLowerCase().contains(query.trim().toLowerCase());
+    final pinnedIds = widget.pinned.map((t) => t.id).toSet();
+    final pinnedItems = widget.pinned.where(match).toList();
+    final items =
+        widget.tags.where((t) => !pinnedIds.contains(t.id) && match(t)).toList();
+    final recent = widget.recent
+        .where((t) => !pinnedIds.contains(t.id) && match(t))
         .toList();
+    final searching = query.trim().isNotEmpty;
+    final empty = items.isEmpty && (searching || pinnedItems.isEmpty);
     return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,17 +141,23 @@ class _BeeTagPickerState extends State<BeeTagPicker> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             widget.placeholder ??
-                                (items.isEmpty
+                                (empty
                                     ? BeeEmptyState(title: widget.emptyLabel)
                                     : Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
-                                            if (query.trim().isEmpty &&
-                                                widget.recent.isNotEmpty)
-                                              _group(widget.recent,
-                                                  widget.recentLabel),
-                                            _group(items, widget.allLabel),
+                                            if (pinnedItems.isNotEmpty)
+                                              _group(pinnedItems,
+                                                  widget.pinnedLabel,
+                                                  exclusiveIds:
+                                                      widget.pinnedExclusive
+                                                          ? pinnedIds
+                                                          : null),
+                                            if (!searching && recent.isNotEmpty)
+                                              _group(recent, widget.recentLabel),
+                                            if (items.isNotEmpty)
+                                              _group(items, widget.allLabel),
                                           ])),
                             if (widget.compact) ..._footer,
                           ])))),

@@ -43,6 +43,7 @@ import 'package:beecount/services/system/logger_service.dart';
 import 'package:beecount/services/ai/ai_chat_service.dart';
 import 'package:beecount/services/ai/agent_app_facade.dart';
 import 'package:beecount/services/ai/bill_card_info_builder.dart';
+import 'package:beecount/services/project/project_tags.dart';
 import 'package:beecount/agent/permission/agent_authorization_gate.dart';
 
 /// AI 对话页面
@@ -1165,7 +1166,9 @@ class _AIChatControlsState extends ConsumerState<AIChatControls>
         account: account?.name,
         fromAccount: account?.name,
         toAccount: toAccount?.name,
-        tags: tagsByTransaction[transactionId]?.map((tag) => tag.name).toList(),
+        tags: tagsByTransaction[transactionId]
+            ?.map((tag) => ProjectTags.displayName(tag.name))
+            .toList(),
         currency: transaction.currencyCode ?? account?.currency,
         ledgerId: transaction.ledgerId,
       );

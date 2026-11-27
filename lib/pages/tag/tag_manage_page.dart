@@ -13,6 +13,7 @@ import 'manage/bindings/tag_library_files.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/export/config_export_service.dart';
 import '../../services/system/logger_service.dart';
+import '../../services/project/project_tags.dart';
 import 'tag_detail_page.dart';
 import 'tag_edit_page.dart';
 
@@ -148,7 +149,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage>
                         BeeTagLibraryItem(
                             tag: BeeTagData(
                                 '${row.tag.id}',
-                                row.tag.name,
+                                ProjectTags.displayName(row.tag.name),
                                 tagDetailColor(row.tag.color,
                                     Theme.of(context).colorScheme.primary)),
                             count: l.tagTransactionCount(row.transactionCount))

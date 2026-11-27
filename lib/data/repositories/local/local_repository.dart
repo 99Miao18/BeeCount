@@ -2872,6 +2872,20 @@ class LocalRepository extends BaseRepository {
       _tagRepo.watchTagsWithStats();
 
   @override
+  Stream<
+      List<
+          ({
+            Tag tag,
+            int transactionCount,
+            double expense,
+            double income,
+            int foreignCount,
+            DateTime? firstAt,
+            DateTime? lastAt,
+          })>> watchProjectUsage(int ledgerId) =>
+      _tagRepo.watchProjectUsage(ledgerId);
+
+  @override
   Stream<Tag?> watchTag(int tagId) => _tagRepo.watchTag(tagId);
 
   @override

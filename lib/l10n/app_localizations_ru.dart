@@ -10108,6 +10108,36 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+  @override
+  String get projectTitle => 'Projects';
+
+  String get projectSubtitle => 'Group spending by project';
+
+  String get projectEmptyTitle => 'No projects yet';
+
+  String get projectEmptySubtitle => 'Group the bills of a trip or a job into one project';
+
+  String get projectCreateTitle => 'New project';
+
+  String get projectEditTitle => 'Edit project';
+
+  String get projectNameLabel => 'Project name';
+
+  String get projectNameHint => 'e.g. Yunnan trip';
+
+  String get projectNameRequired => 'Enter a project name';
+
+  String get projectCreateSuccess => 'Project created';
+
+  String get projectUpdateSuccess => 'Project updated';
+
+  String get projectDeleteConfirmTitle => 'Delete project';
+
+  String projectDeleteConfirmMessage(String name) {
+    return 'Delete project "${name}"? Its transactions are kept and only lose the project link.';
+  }
+
+  String get projectForeignNotice => 'Includes bills in other currencies; totals are summed in their original currency';
 
   @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';

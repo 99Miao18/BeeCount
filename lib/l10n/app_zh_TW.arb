@@ -2143,7 +2143,21 @@
             }
         }
     },
-    "tagTransactionCount": "{count}筆",
+    "projectTitle": "項目",
+  "projectSubtitle": "依項目歸集花費",
+  "projectEmptyTitle": "還沒有項目",
+  "projectEmptySubtitle": "一次旅行、一件工程的帳單可以單獨歸到一個項目裡",
+  "projectCreateTitle": "新建項目",
+  "projectEditTitle": "編輯項目",
+  "projectNameLabel": "項目名稱",
+  "projectNameHint": "例如：雲南之行",
+  "projectNameRequired": "請填寫項目名稱",
+  "projectCreateSuccess": "項目已建立",
+  "projectUpdateSuccess": "項目已更新",
+  "projectDeleteConfirmTitle": "刪除項目",
+  "projectDeleteConfirmMessage": "「{name}」會被刪除，項目裡的帳單會保留，只去掉項目歸屬。",
+  "projectForeignNotice": "含外幣帳單，金額按交易幣種原值合計",
+  "tagTransactionCount": "{count}筆",
     "@tagTransactionCount": {
         "placeholders": {
             "count": {

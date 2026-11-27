@@ -122,6 +122,24 @@ abstract class TagRepository {
   /// 监听所有标签（带统计）
   Stream<List<({Tag tag, int transactionCount})>> watchTagsWithStats();
 
+  /// 监听某账本内的项目（= 带 ProjectTags.prefix 前缀的标签）及其本账本用量。
+  ///
+  /// 项目直接复用标签通道（服务端同步白名单里没有 project 实体），本方法只
+  /// 做聚合，不改数据结构：统计口径限定在 [ledgerId]，`excludeFromStats`
+  /// 的账单不计金额但仍计入笔数。[foreignCount] 用于提示「含外币」，因为
+  /// tags/transactions 里存的是交易币种原值，混合币种时直接相加会失真。
+  Stream<
+      List<
+          ({
+            Tag tag,
+            int transactionCount,
+            double expense,
+            double income,
+            int foreignCount,
+            DateTime? firstAt,
+            DateTime? lastAt,
+          })>> watchProjectUsage(int ledgerId);
+
   /// 监听标签详情
   Stream<Tag?> watchTag(int tagId);
 

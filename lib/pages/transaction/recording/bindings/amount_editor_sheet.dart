@@ -25,6 +25,7 @@ import '../../../../utils/currencies.dart';
 import '../../../../utils/account_type_utils.dart';
 import '../../../../data/repositories/local/local_repository.dart';
 import '../../../../utils/shared_ledger_picker_filter.dart';
+import '../../../../services/project/project_tags.dart';
 import '../../../tag/widgets/tag_selector.dart';
 import 'note_picker_dialog.dart';
 import '../../../shared/selectors/account_selector.dart';
@@ -1554,7 +1555,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final parsed = hex == null
         ? null
         : int.tryParse(hex.length == 6 ? 'ff$hex' : hex, radix: 16);
-    return BeeTagData('${tag.id}', tag.name,
+    return BeeTagData('${tag.id}', ProjectTags.displayName(tag.name),
         parsed == null ? Theme.of(context).colorScheme.primary : Color(parsed));
   }
 

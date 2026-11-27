@@ -9,6 +9,7 @@ import '../../../transaction/category_detail_page.dart';
 import '../../../transaction/transaction_detail_page.dart';
 import '../../../../utils/category_utils.dart';
 import '../../../../utils/transaction_edit_utils.dart';
+import '../../../../services/project/project_tags.dart';
 import '../transaction_list_item.dart';
 import '../../resources/category_icon_adapter.dart';
 import '../../../transaction/search/bindings/transaction_search.dart';
@@ -92,7 +93,11 @@ class TransactionTileBinding extends ConsumerWidget {
         happenedAt: t.happenedAt,
         showFullDate: fullDate,
         tags: tags
-            .map((tag) => (id: tag.id, name: tag.name, color: tag.color))
+            .map((tag) => (
+                  id: tag.id,
+                  name: ProjectTags.displayName(tag.name),
+                  color: tag.color
+                ))
             .toList(),
         attachmentCount: attachmentCount,
         onAttachmentTap: () => open(AttachmentPreviewPage.fromTransaction(

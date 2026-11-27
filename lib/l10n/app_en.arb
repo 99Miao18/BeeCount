@@ -2825,6 +2825,27 @@
   "tagSelectOwnerManaged": "Shared ledger tags are managed by the owner",
   "tagSelectRecentlyUsed": "Recently Used",
   "tagSelectAllTags": "All Tags",
+  "projectTitle": "Projects",
+  "projectSubtitle": "Group spending by project",
+  "projectEmptyTitle": "No projects yet",
+  "projectEmptySubtitle": "Group the bills of a trip or a job into one project",
+  "projectCreateTitle": "New project",
+  "projectEditTitle": "Edit project",
+  "projectNameLabel": "Project name",
+  "projectNameHint": "e.g. Yunnan trip",
+  "projectNameRequired": "Enter a project name",
+  "projectCreateSuccess": "Project created",
+  "projectUpdateSuccess": "Project updated",
+  "projectDeleteConfirmTitle": "Delete project",
+  "projectDeleteConfirmMessage": "Delete project \"{name}\"? Its transactions are kept and only lose the project link.",
+  "@projectDeleteConfirmMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
   "tagTransactionCount": "{count} transactions",
   "@tagTransactionCount": {
     "placeholders": {
