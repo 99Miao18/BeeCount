@@ -60,7 +60,7 @@ class ProjectPickerSheet extends ConsumerWidget {
                   }
                 })),
         child: SizedBox(
-            height: math.min(MediaQuery.sizeOf(context).height * .52, 380),
+            height: math.min(MediaQuery.sizeOf(context).height * .52, 380.0),
             child: usage.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, __) => Center(
