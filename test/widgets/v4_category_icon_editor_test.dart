@@ -17,6 +17,14 @@ void main() {
     for (final kind in ['expense', 'income']) {
       final groups = categoryEditorIconGroups(AppLocalizationsZh(), kind);
       expect(groups.first.colored, isTrue, reason: '彩色组排在最前');
+      // 彩色图标按场景分段，否则几十个图标平铺在一个 tab 里根本找不到。
+      final colorful = groups.first;
+      expect(colorful.sections.length, greaterThan(5),
+          reason: '彩色组要分成多个场景段');
+      for (final section in colorful.sections) {
+        expect(section.label, isNotEmpty, reason: '每个场景段都要有标题');
+        expect(section.iconKeys, isNotEmpty, reason: section.label);
+      }
       for (final group in groups) {
         expect(group.iconKeys, isNotEmpty, reason: group.label);
         // 同一分组内不允许两个格子画出同一个图标——这正是旧版的问题。

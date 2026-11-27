@@ -1,21 +1,33 @@
 import '../../../../l10n/app_localizations.dart';
 
+/// 组内分段：同一个 tab 里按场景再切块，[label] 为空表示与上一段连排。
+/// 图标多的分组（彩色）靠它保持可定位，避免一大片平铺。
+class CategoryIconSection {
+  const CategoryIconSection(this.label, this.iconKeys);
+  final String label;
+  final List<String> iconKeys;
+}
+
 /// 一个图标分组。[colored] 组的 [iconKeys] 是 `color:<Glyph>` 形式，
 /// 渲染时走固定强调色（见 category_icon_glyph.dart）；普通组存旧持久化键，
 /// 保证历史分类的 icon 字段无需迁移。
 class CategoryIconGroupData {
-  const CategoryIconGroupData(this.label, this.iconKeys,
+  CategoryIconGroupData(this.label, List<String> iconKeys, {this.colored = false})
+      : sections = [CategoryIconSection('', iconKeys)];
+
+  CategoryIconGroupData.sectioned(this.label, this.sections,
       {this.colored = false});
+
   final String label;
-  final List<String> iconKeys;
+  final List<CategoryIconSection> sections;
   final bool colored;
+
+  /// 扁平化后的全部键，供校验与兜底查找使用。
+  List<String> get iconKeys => [for (final s in sections) ...s.iconKeys];
 }
 
-List<CategoryIconGroupData> categoryEditorIconGroups(
-    AppLocalizations l10n, String kind) {
-  if (kind == 'expense') {
-    return [
-      CategoryIconGroupData(l10n.categoryIconGroupColorful, [
+List<CategoryIconSection> _colorfulSections(AppLocalizations l10n) => [
+      CategoryIconSection(l10n.categoryIconGroupFoodDining, [
         'color:Utensils',
         'color:Coffee',
         'color:Pizza',
@@ -28,16 +40,8 @@ List<CategoryIconGroupData> categoryEditorIconGroups(
         'color:Martini',
         'color:Wine',
         'color:Milk',
-        'color:ShoppingCart',
-        'color:ShoppingBag',
-        'color:ShoppingBasket',
-        'color:Store',
-        'color:Package',
-        'color:ReceiptText',
-        'color:PiggyBank',
-        'color:Coins',
-        'color:CreditCard',
-        'color:Wallet',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupTransportation, [
         'color:Car',
         'color:Bus',
         'color:TrainFront',
@@ -49,13 +53,24 @@ List<CategoryIconGroupData> categoryEditorIconGroups(
         'color:CarFront',
         'color:Route',
         'color:Footprints',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupShopping, [
+        'color:ShoppingCart',
+        'color:ShoppingBag',
+        'color:ShoppingBasket',
+        'color:Store',
+        'color:Package',
+        'color:ReceiptText',
+        'color:PiggyBank',
+        'color:Coins',
+        'color:CreditCard',
+        'color:Wallet',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupHomeLiving, [
         'color:House',
         'color:Building2',
         'color:Zap',
         'color:Droplet',
-        'color:Smartphone',
-        'color:Wifi',
-        'color:Headphones',
         'color:Refrigerator',
         'color:WashingMachine',
         'color:BedDouble',
@@ -63,28 +78,18 @@ List<CategoryIconGroupData> categoryEditorIconGroups(
         'color:PlugZap',
         'color:Hammer',
         'color:Wrench',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupCommunicationDevices, [
+        'color:Smartphone',
+        'color:Wifi',
+        'color:Headphones',
         'color:Laptop',
         'color:Monitor',
         'color:Keyboard',
         'color:Router',
         'color:Camera',
-        'color:Hospital',
-        'color:Pill',
-        'color:Dumbbell',
-        'color:Bandage',
-        'color:Syringe',
-        'color:HeartPulse',
-        'color:GraduationCap',
-        'color:BookOpen',
-        'color:LibraryBig',
-        'color:Languages',
-        'color:Calculator',
-        'color:Palette',
-        'color:PawPrint',
-        'color:Rabbit',
-        'color:Flower2',
-        'color:Trees',
-        'color:Sun',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupEntertainmentLeisure, [
         'color:Gamepad2',
         'color:Clapperboard',
         'color:Music',
@@ -92,16 +97,43 @@ List<CategoryIconGroupData> categoryEditorIconGroups(
         'color:PartyPopper',
         'color:Dices',
         'color:Trophy',
+        'color:FerrisWheel',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupHealthMedical, [
+        'color:Hospital',
+        'color:Pill',
+        'color:Dumbbell',
+        'color:Bandage',
+        'color:Syringe',
+        'color:HeartPulse',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupEducationLearning, [
+        'color:GraduationCap',
+        'color:BookOpen',
+        'color:LibraryBig',
+        'color:Languages',
+        'color:Calculator',
+        'color:Palette',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupPetsAnimals, [
+        'color:PawPrint',
+        'color:Rabbit',
+        'color:Flower2',
+        'color:Trees',
+        'color:Sun',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupClothingBeauty, [
         'color:Scissors',
         'color:Shirt',
         'color:Watch',
+      ]),
+      CategoryIconSection(l10n.categoryIconGroupOtherMiscellaneous, [
         'color:Sparkles',
         'color:Gift',
         'color:Banknote',
         'color:Landmark',
         'color:TrendingUp',
         'color:BriefcaseBusiness',
-        'color:FerrisWheel',
         'color:ShieldCheck',
         'color:Baby',
         'color:Ticket',
@@ -110,7 +142,16 @@ List<CategoryIconGroupData> categoryEditorIconGroups(
         'color:Archive',
         'color:Map',
         'color:Globe',
-      ], colored: true),
+      ]),
+    ];
+
+List<CategoryIconGroupData> categoryEditorIconGroups(
+    AppLocalizations l10n, String kind) {
+  if (kind == 'expense') {
+    return [
+      CategoryIconGroupData.sectioned(
+        l10n.categoryIconGroupColorful, _colorfulSections(l10n),
+        colored: true),
       CategoryIconGroupData(l10n.categoryIconGroupBasic, [
         'category',
         'star',
@@ -288,102 +329,9 @@ List<CategoryIconGroupData> categoryEditorIconGroups(
     ];
   }
   return [
-    CategoryIconGroupData(l10n.categoryIconGroupColorful, [
-      'color:Utensils',
-      'color:Coffee',
-      'color:Pizza',
-      'color:CakeSlice',
-      'color:Soup',
-      'color:Fish',
-      'color:IceCreamBowl',
-      'color:Sandwich',
-      'color:Croissant',
-      'color:Martini',
-      'color:Wine',
-      'color:Milk',
-      'color:ShoppingCart',
-      'color:ShoppingBag',
-      'color:ShoppingBasket',
-      'color:Store',
-      'color:Package',
-      'color:ReceiptText',
-      'color:PiggyBank',
-      'color:Coins',
-      'color:CreditCard',
-      'color:Wallet',
-      'color:Car',
-      'color:Bus',
-      'color:TrainFront',
-      'color:Plane',
-      'color:Fuel',
-      'color:Ship',
-      'color:Bike',
-      'color:Truck',
-      'color:CarFront',
-      'color:Route',
-      'color:Footprints',
-      'color:House',
-      'color:Building2',
-      'color:Zap',
-      'color:Droplet',
-      'color:Smartphone',
-      'color:Wifi',
-      'color:Headphones',
-      'color:Refrigerator',
-      'color:WashingMachine',
-      'color:BedDouble',
-      'color:Armchair',
-      'color:PlugZap',
-      'color:Hammer',
-      'color:Wrench',
-      'color:Laptop',
-      'color:Monitor',
-      'color:Keyboard',
-      'color:Router',
-      'color:Camera',
-      'color:Hospital',
-      'color:Pill',
-      'color:Dumbbell',
-      'color:Bandage',
-      'color:Syringe',
-      'color:HeartPulse',
-      'color:GraduationCap',
-      'color:BookOpen',
-      'color:LibraryBig',
-      'color:Languages',
-      'color:Calculator',
-      'color:Palette',
-      'color:PawPrint',
-      'color:Rabbit',
-      'color:Flower2',
-      'color:Trees',
-      'color:Sun',
-      'color:Gamepad2',
-      'color:Clapperboard',
-      'color:Music',
-      'color:Drama',
-      'color:PartyPopper',
-      'color:Dices',
-      'color:Trophy',
-      'color:Scissors',
-      'color:Shirt',
-      'color:Watch',
-      'color:Sparkles',
-      'color:Gift',
-      'color:Banknote',
-      'color:Landmark',
-      'color:TrendingUp',
-      'color:BriefcaseBusiness',
-      'color:FerrisWheel',
-      'color:ShieldCheck',
-      'color:Baby',
-      'color:Ticket',
-      'color:Bell',
-      'color:Calendar',
-      'color:Archive',
-      'color:Map',
-      'color:Globe',
-    ], colored: true),
+    CategoryIconGroupData.sectioned(
+        l10n.categoryIconGroupColorful, _colorfulSections(l10n),
+        colored: true),
     CategoryIconGroupData(l10n.categoryIconGroupBasic, [
       'category',
       'star',

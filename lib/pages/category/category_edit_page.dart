@@ -153,42 +153,49 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
                           value: _icon,
                           enabled: !_busy,
                           loading: _picking,
+                          initialGroupId: isEditing ? null : '',
                           groups: [
                             for (var i = 0; i < groups.length; i++)
                               BeeCategoryIconGroup(
                                   id: '$i',
                                   label: groups[i].label,
                                   items:
-                                      groups[i].iconKeys.map(choice).toList())
+                                      groups[i].iconKeys.map(choice).toList(),
+                                  sections: [
+                                    for (final s in groups[i].sections)
+                                      BeeCategoryIconSection(
+                                          label: s.label,
+                                          items: s.iconKeys.map(choice).toList())
+                                  ])
                           ],
                           commonItems: (widget.kind == 'expense'
                                   ? [
-                                      'restaurant',
-                                      'local_cafe',
-                                      'directions_subway',
-                                      'shopping_basket',
-                                      'home',
-                                      'movie',
-                                      'book',
-                                      'favorite',
-                                      'card_giftcard',
-                                      'computer',
-                                      'fitness_center',
-                                      'pets'
+                                      'color:Utensils',
+                                      'color:Coffee',
+                                      'color:ShoppingCart',
+                                      'color:ShoppingBasket',
+                                      'color:TrainFront',
+                                      'color:Car',
+                                      'color:House',
+                                      'color:Zap',
+                                      'color:Smartphone',
+                                      'color:HeartPulse',
+                                      'color:Clapperboard',
+                                      'color:Gift'
                                     ]
                                   : [
-                                      'work',
-                                      'account_balance',
-                                      'savings',
-                                      'card_giftcard',
-                                      'paid',
-                                      'trending_up',
-                                      'wallet',
-                                      'emoji_events',
-                                      'handshake',
-                                      'undo',
-                                      'sync',
-                                      'category'
+                                      'color:BriefcaseBusiness',
+                                      'color:Banknote',
+                                      'color:Landmark',
+                                      'color:PiggyBank',
+                                      'color:TrendingUp',
+                                      'color:Coins',
+                                      'color:Wallet',
+                                      'color:Gift',
+                                      'color:Trophy',
+                                      'color:ReceiptText',
+                                      'color:Store',
+                                      'color:Calendar'
                                     ])
                               .map(choice)
                               .toList(),
