@@ -672,7 +672,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
                         horizontalInset: widget.flatSurface ? 0 : 4,
                         onDelete: () async {
                           final repo = ref.read(repositoryProvider);
-                          await repo.deleteTransaction(it.t.id);
+                          await repo.deleteTransactionToTrash(it.t.id);
 
                           if (!context.mounted) return;
                           final curLedger = ref.read(currentLedgerIdProvider);

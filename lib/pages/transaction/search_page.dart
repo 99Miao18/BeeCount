@@ -219,7 +219,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         }
       }
       for (final id in ids) {
-        await repo.deleteTransaction(id);
+        await repo.deleteTransactionToTrash(id);
       }
       return ids.length;
     }, l.searchBatchDeleteSuccess, l.searchBatchDeleteFailed);

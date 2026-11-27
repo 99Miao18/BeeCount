@@ -158,6 +158,23 @@ class Transactions extends Table {
   RealColumn get nativeAmount => real().nullable()();
 }
 
+/// 「最近删除」：用户删除交易时的快照，保留 30 天，可恢复。
+///
+/// 只存在于本地（不参与云同步）——云端删除是立即物理删除，恢复相当于把这笔
+/// 重新记一遍（恢复时生成新的 syncId，不会和云端的删除标记打架）。
+/// 名称类字段（分类/账户/标签）随快照一起存，删除后即使分类改名或删掉，
+/// 回收站里也能显示当时的样子。
+class TrashTransactions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get ledgerId => integer()();
+  TextColumn get ledgerName => text().withDefault(const Constant(''))();
+  TextColumn get syncId => text().nullable()();
+
+  /// 快照 JSON（金额、类型、时间、备注、分类/账户/标签 id 与名称、币种等）。
+  TextColumn get payload => text()();
+  DateTimeColumn get deletedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class RecurringTransactions extends Table {
   /// A persisted handoff freezes this local template before the first network request.
   TextColumn get cloudHandoffKey => text().nullable()();
@@ -497,6 +514,7 @@ class SharedLedgerTags extends Table {
   Accounts,
   Categories,
   Transactions,
+  TrashTransactions,
   RecurringTransactions,
   Conversations,
   Messages,
@@ -529,7 +547,7 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 38; // v38: 老分类归默认账本（分类严格绑定，定制）
+  int get schemaVersion => 39; // v39: 最近删除（本地回收站，30 天可恢复）
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1315,6 +1333,10 @@ class BeeDatabase extends _$BeeDatabase {
                   'WHERE ledger_id IS NULL AND kind <> ?',
                   [defaultId, 'transfer']);
             }
+          }
+          if (from < 39) {
+            // v39: 本地「最近删除」（回收站）。纯本地表，不参与同步。
+            await migrator.createTable(trashTransactions);
           }
         },
         onCreate: (m) async {

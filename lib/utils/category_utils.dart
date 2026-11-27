@@ -35,7 +35,9 @@ class CategoryUtils {
   static String displayName(String? categoryName, AppLocalizations l10n,
       {String kind = 'expense'}) {
     if (categoryName == null || categoryName.isEmpty) {
-      return l10n.categoryDefaultTitle;
+      // 无分类(转账、AI 未识别、分类被删)统一叫「未分类」。以前这里回落到
+      // 「默认分类」,与洞察页的「未分类」两套叫法指同一批记录,已统一。
+      return l10n.commonUncategorized;
     }
 
     // 如果是key格式（新系统），进行翻译

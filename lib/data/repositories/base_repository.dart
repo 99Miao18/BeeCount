@@ -12,6 +12,7 @@ import 'budget_repository.dart';
 import 'attachment_repository.dart';
 import 'exchange_rate_repository.dart';
 import '../../models/home_transaction_preview.dart';
+import '../../models/trash_item.dart';
 
 /// 基础 Repository 抽象类
 /// 组合所有 Repository 接口，用于类型约束
@@ -90,4 +91,30 @@ abstract class BaseRepository
     required int recurringId,
     required DateTime scheduledDate,
   });
+
+  // -------------------------------------------------------------------
+  // 最近删除（本地回收站，30 天）
+  //
+  // 声明在聚合层：快照要同时读交易、分类、账户、标签、账本，
+  // 恢复要重新走 addTransaction + 标签写入 + 变更登记。
+  // -------------------------------------------------------------------
+
+  /// 删除交易并先留一份快照（回收站）。UI 的删除入口都应该走这条。
+  Future<void> deleteTransactionToTrash(int id);
+
+  /// 该账本的回收站列表（删除时间倒序，已自动剔除过期的）。
+  Future<List<TrashItem>> getTrashItems({required int ledgerId});
+
+  /// 恢复一条：按快照重新记一笔（新 syncId，不复活云端那条），
+  /// 分类/账户/标签在当前账本已不存在时自动丢弃。成功返回 true。
+  Future<bool> restoreTrashItem(int trashId);
+
+  /// 彻底删除一条回收站记录（不动已经删掉的交易）。
+  Future<void> deleteTrashItem(int trashId);
+
+  /// 清空某账本的回收站，返回清理条数。
+  Future<int> clearTrash({required int ledgerId});
+
+  /// 清理超过保留期的记录，返回清理条数。
+  Future<int> purgeExpiredTrash();
 }

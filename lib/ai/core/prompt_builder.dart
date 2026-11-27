@@ -72,7 +72,7 @@ class PromptBuilder {
    - 商品名称（长标题需简化，如"2025春季新款黑色斜纹格纹半身裙"→"黑色半身裙"）
    - 用户描述（如"给女儿买"）
    - 没有则留空
-4. category: 从分类列表选择（转账可填"转账"）
+4. category: 从分类列表逐字选择（「父 / 子」写法照抄；转账填"转账"）；列表里没有合适的就省略该字段，不要自造
 5. type: income、expense 或 transfer
 6. account: 支付账户（收入/支出可用）
 7. from_account: 转出账户（仅转账可用）
@@ -80,7 +80,7 @@ class PromptBuilder {
 9. tag/tags: 标签（可选，单个字符串或字符串数组）
 $_currencyFieldSpec
 
-示例：
+示例（示例里的分类名只是示意，实际必须用分类列表里的原名）：
 单笔"昨天中午吃饭50" → [{"amount":-50,"time":"2025-11-24T12:00:00","category":"餐饮","type":"expense"}]
 单笔"早上在星巴克买咖啡30" → [{"amount":-30,"time":"{{CURRENT_DATE}}T09:00:00","note":"星巴克","category":"咖啡","type":"expense"}]
 单笔"商品:2025春季新款黑色半身裙 金额:￥299" → [{"amount":-299,"note":"黑色半身裙","category":"服装","type":"expense"}]
@@ -214,7 +214,12 @@ $_currencyFieldSpec
     if (ctx.incomeCategories.isNotEmpty) {
       parts.add('收入：${ctx.incomeCategories.join('、')}');
     }
-    return '分类列表：\n${parts.join('\n')}';
+    // 定制账本模板是「父 / 子」两级，叶子名常与常识叫法不同（买菜做饭、
+    // 外出就餐）。不加这段约束时模型会照示例回「餐饮」「交通」，而这类
+    // 父级名不在可记账列表里，落库只能记成未分类。
+    return '分类列表（category 必须原样照抄下面的名称，包括「父 / 子」写法；'
+        '不要自造、不要改写、不要翻译成更常见的叫法；确实都不合适就省略该字段）：\n'
+        '${parts.join('\n')}';
   }
 
   /// 账户清单。**只有币种 ≠ 账本本位币的账户才标注币种** —— 单币种账本渲染出

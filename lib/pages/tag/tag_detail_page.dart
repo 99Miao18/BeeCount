@@ -103,7 +103,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       if (transaction == null || transaction.ledgerId != sourceLedgerId) {
         throw StateError('Transaction scope changed');
       }
-      await repo.deleteTransaction(id);
+      await repo.deleteTransactionToTrash(id);
       await PostProcessor.sync(ref, ledgerId: sourceLedgerId);
       ref.invalidate(countsForLedgerProvider(sourceLedgerId));
       ref.read(statsRefreshProvider.notifier).state++;
