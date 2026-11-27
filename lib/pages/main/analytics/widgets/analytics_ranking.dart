@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../transaction/category_detail_page.dart';
+import '../../../transaction/search_page.dart';
+import '../../../transaction/search/bindings/transaction_search.dart';
 import '../../../../providers.dart';
 import '../../../../utils/category_utils.dart';
 import '../../../../utils/format_money.dart';
@@ -15,10 +17,15 @@ class AnalyticsRanking extends ConsumerStatefulWidget {
       {super.key,
       required this.data,
       required this.scope,
-      required this.month});
+      required this.month,
+      required this.type});
   final AnalyticsResult data;
   final String scope;
   final DateTime month;
+
+  /// expense / income / balance:未分类下钻时用来限定交易类型
+  /// (转账没有分类,不加类型会串进未分类列表)。
+  final String type;
   @override
   ConsumerState<AnalyticsRanking> createState() => _AnalyticsRankingState();
 }
@@ -70,7 +77,24 @@ class _AnalyticsRankingState extends ConsumerState<AnalyticsRanking> {
         .toList();
     void detail(String id) {
       final categoryId = int.tryParse(id);
-      if (categoryId == null) return;
+      if (categoryId == null) {
+        // 「未分类」行:id 为 null,没有分类详情可看,改为列出这段时间内
+        // 没有分类的交易,让用户可以批量补分类。
+        Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+                builder: (_) => SearchPage(
+                    title: l.commonUncategorized,
+                    initialFilter: TransactionSearchFilter(
+                        uncategorized: true,
+                        kind: widget.type == 'income' ? 'income' : 'expense',
+                        start: widget.scope == 'all' ? null : widget.data.start,
+                        end: widget.scope == 'all'
+                            ? null
+                            : widget.data.end
+                                .subtract(const Duration(days: 1))))));
+        return;
+      }
       final names = <int?, String>{
         for (final e in widget.data.categories) e.id: e.name,
         for (final e in widget.data.categories)

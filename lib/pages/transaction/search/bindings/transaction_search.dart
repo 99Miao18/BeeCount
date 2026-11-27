@@ -26,13 +26,18 @@ class TransactionSearchFilter {
       this.maximum,
       this.start,
       this.end,
-      this.basis = SearchAmountBasis.original});
+      this.basis = SearchAmountBasis.original,
+      this.uncategorized = false});
   final Category? category;
   final int? accountId, tagId;
   final String? kind;
   final double? minimum, maximum;
   final DateTime? start, end;
   final SearchAmountBasis basis;
+
+  /// 只看没有分类的交易(洞察「未分类」行下钻)。与 [category] 互斥:
+  /// 命中本标记时忽略具体分类条件。
+  final bool uncategorized;
   bool get isEmpty =>
       category == null &&
       accountId == null &&
@@ -41,7 +46,8 @@ class TransactionSearchFilter {
       minimum == null &&
       maximum == null &&
       start == null &&
-      end == null;
+      end == null &&
+      !uncategorized;
 }
 
 /// Owns the live query and selection. Widgets only render its current projection.
@@ -213,6 +219,7 @@ class TransactionSearchController extends ChangeNotifier {
                 ].any((text) => text.toLowerCase().contains(q))) {
               return false;
             }
+            if (f.uncategorized && c != null) return false;
             if (f.category != null &&
                 c?.id != f.category!.id &&
                 c?.parentId != f.category!.id) {

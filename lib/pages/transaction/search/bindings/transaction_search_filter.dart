@@ -31,6 +31,7 @@ class _FilterState extends State<TransactionSearchFilterDialog> {
   late String? kind = widget.initial.kind;
   late DateTime? start = widget.initial.start, end = widget.initial.end;
   late SearchAmountBasis basis = widget.initial.basis;
+  late bool uncategorized = widget.initial.uncategorized;
   late final minimum =
       TextEditingController(text: widget.initial.minimum?.toString() ?? '');
   late final maximum =
@@ -86,7 +87,8 @@ class _FilterState extends State<TransactionSearchFilterDialog> {
             maximum: max,
             start: start,
             end: end,
-            basis: basis));
+            basis: basis,
+            uncategorized: uncategorized));
   }
 
   Widget _select<T>(String label, T? value, Map<T, String> choices,
@@ -112,16 +114,21 @@ class _FilterState extends State<TransactionSearchFilterDialog> {
                 children: [
               BeeMenuRow(
                   title: l.searchCategoryFilter,
-                  subtitle: category == null
-                      ? l.v4SearchAll
-                      : CategoryUtils.getDisplayName(category!.name, context,
-                          kind: category!.kind),
-                  trailing: category == null
+                  subtitle: uncategorized
+                      ? l.commonUncategorized
+                      : category == null
+                          ? l.v4SearchAll
+                          : CategoryUtils.getDisplayName(category!.name, context,
+                              kind: category!.kind),
+                  trailing: category == null && !uncategorized
                       ? const BeeLineIcon('ChevronRight', size: 16)
                       : BeeIconButton(
                           label: l.commonRemove,
                           icon: const BeeLineIcon('X', size: 16),
-                          onPressed: () => setState(() => category = null)),
+                          onPressed: () => setState(() {
+                                category = null;
+                                uncategorized = false;
+                              })),
                   onTap: () async {
                     final picked = await showCategorySelector(context,
                         type: 'all',
@@ -131,7 +138,10 @@ class _FilterState extends State<TransactionSearchFilterDialog> {
                         expandChildrenByDefault: true,
                         title: l.searchCategoryFilter);
                     if (picked != null && mounted) {
-                      setState(() => category = picked);
+                      setState(() {
+                        category = picked;
+                        uncategorized = false;
+                      });
                     }
                   }),
               const SizedBox(height: 12),
@@ -225,6 +235,7 @@ class _FilterState extends State<TransactionSearchFilterDialog> {
                     kind = null;
                     start = null;
                     end = null;
+                    uncategorized = false;
                     minimum.clear();
                     maximum.clear();
                     error = null;
