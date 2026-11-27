@@ -76,13 +76,18 @@ abstract class CategoryRepository {
   Future<List<Category>> getAllCategoriesIncludingShared();
 
   /// 获取所有一级分类
-  Future<List<Category>> getTopLevelCategories(String kind);
+  ///
+  /// [ledgerId] 非空时只返回该账本的分类(定制:分类严格归属账本)。
+  /// 传 null 保持旧行为(全量),仅供确实需要跨账本的场景(导出、全局映射)。
+  Future<List<Category>> getTopLevelCategories(String kind, {int? ledgerId});
 
   /// 获取指定一级分类下的所有二级分类
   Future<List<Category>> getSubCategories(int parentId);
 
   /// 获取可用于记账的分类（叶子分类）
-  Future<List<Category>> getUsableCategories(String kind);
+  ///
+  /// [ledgerId] 语义同 [getTopLevelCategories]。
+  Future<List<Category>> getUsableCategories(String kind, {int? ledgerId});
 
   /// 检查分类名称是否重复(同 kind 内判重,跨 kind 允许同名)
   Future<bool> isCategoryNameDuplicate({

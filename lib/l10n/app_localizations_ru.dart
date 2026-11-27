@@ -10097,6 +10097,19 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String transactionMoveRemapCleared(int cleared) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cleared,
+      locale: localeName,
+      other:
+          '$cleared transactions have no category of the same name in the target ledger and are now uncategorized',
+      one:
+          '1 transaction has no category of the same name in the target ledger and is now uncategorized',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';
 
   @override

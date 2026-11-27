@@ -55,8 +55,11 @@ class BillCreationService {
     logger.debug(_tag,
         '[类型判断] type=${bill.type?.name} amount=$amount → $transactionType');
 
-    // 2. 查询对应类型的所有可用分类
-    final categories = await _loadUsableCategories(transactionType);
+    // 2. 查询对应类型的所有可用分类（**只取本账本**：分类严格归属账本，
+    //    跨账本取数会让「投资账本里没有餐饮」的账单匹配到别的账本的餐饮，
+    //    落库后这笔账的分类就不在当前账本的分类树里了）
+    final categories =
+        await _loadUsableCategories(transactionType, ledgerId: ledgerId);
 
     // 3. 匹配分类(AI 名称 → 完全匹配 → 模糊匹配 → 规则匹配 → 兜底"其他")
     var categoryId =
@@ -190,8 +193,10 @@ class BillCreationService {
   }
 
   /// 获取按类型过滤的可用分类(排除有子分类的父分类)。公开给业务复用。
-  Future<List<Category>> getCategoriesByType(String type) async {
-    final top = await repo.getTopLevelCategories(type);
+  ///
+  /// [ledgerId] 非空时只取该账本的分类(定制)；旧调用方不传则为全量。
+  Future<List<Category>> getCategoriesByType(String type, {int? ledgerId}) async {
+    final top = await repo.getTopLevelCategories(type, ledgerId: ledgerId);
     final all = <Category>[...top];
     for (final c in top) {
       all.addAll(await repo.getSubCategories(c.id));
@@ -219,8 +224,9 @@ class BillCreationService {
     return 'expense';
   }
 
-  Future<List<Category>> _loadUsableCategories(String type) async {
-    final top = await repo.getTopLevelCategories(type);
+  Future<List<Category>> _loadUsableCategories(String type,
+      {int? ledgerId}) async {
+    final top = await repo.getTopLevelCategories(type, ledgerId: ledgerId);
     final all = <Category>[...top];
     for (final c in top) {
       all.addAll(await repo.getSubCategories(c.id));
@@ -276,7 +282,12 @@ class BillCreationService {
     );
   }
 
-  /// 获取兜底分类("其他"系列或最后一个)
+  /// 获取兜底分类("其他"系列)。
+  ///
+  /// 定制：**不再退化成「列表最后一个分类」**。分类严格归属账本后，很多账本
+  /// 根本没有「其他」（如投资账本的平台树），取最后一个会把「超市 50 元」
+  /// 记到「华宝」名下 —— 比留空更误导。找不到就返回 null，账单显示「未分类」，
+  /// 用户一眼能看出需要手选。
   int? _fallbackCategoryId(List<Category> categories) {
     if (categories.isEmpty) return null;
     const keywords = ['其他', 'other', '其它', '杂项', 'misc'];
@@ -289,9 +300,8 @@ class BillCreationService {
         return hit.id;
       }
     }
-    final last = categories.last;
-    logger.debug(_tag, '[分类兜底] 使用"${last.name}"(ID:${last.id})');
-    return last.id;
+    logger.debug(_tag, '[分类兜底] 当前账本无「其他」类分类，留空(未分类)');
+    return null;
   }
 
   /// 收入/支出场景的账户匹配。

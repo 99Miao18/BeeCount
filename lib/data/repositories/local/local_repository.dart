@@ -1468,16 +1468,16 @@ class LocalRepository extends BaseRepository {
       _categoryRepo.getCategoryById(categoryId);
 
   @override
-  Future<List<Category>> getTopLevelCategories(String kind) =>
-      _categoryRepo.getTopLevelCategories(kind);
+  Future<List<Category>> getTopLevelCategories(String kind, {int? ledgerId}) =>
+      _categoryRepo.getTopLevelCategories(kind, ledgerId: ledgerId);
 
   @override
   Future<List<Category>> getSubCategories(int parentId) =>
       _categoryRepo.getSubCategories(parentId);
 
   @override
-  Future<List<Category>> getUsableCategories(String kind) =>
-      _categoryRepo.getUsableCategories(kind);
+  Future<List<Category>> getUsableCategories(String kind, {int? ledgerId}) =>
+      _categoryRepo.getUsableCategories(kind, ledgerId: ledgerId);
 
   @override
   Future<bool> isCategoryNameDuplicate(

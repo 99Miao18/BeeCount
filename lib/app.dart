@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:beecount_business_ui/beecount_business_ui.dart';
 import 'package:beecount_ui/beecount_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -923,34 +922,9 @@ class _BeeAppState extends ConsumerState<BeeApp>
               onCenterLongPressEnd: _onLongPressEnd,
             ),
           ),
-          // 开发模式下的主题切换按钮
-          if (kDebugMode &&
-              !const bool.fromEnvironment('BEECOUNT_V4_RECORDING'))
-            Positioned(
-              right: 16,
-              bottom: 100,
-              child: FloatingActionButton.small(
-                heroTag: 'themeSwitcher',
-                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-                onPressed: () {
-                  final current = ref.read(themeModeProvider);
-                  final next = current == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark;
-                  ref.read(themeModeProvider.notifier).state = next;
-                },
-                child: Icon(
-                  Theme.of(context).brightness == Brightness.dark
-                      ? Icons.light_mode
-                      : Icons.dark_mode,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black
-                      : Colors.white,
-                ),
-              ),
-            ),
+          // 定制：移除开发者用的悬浮主题切换按钮。
+          // debug 包恒满足 kDebugMode，这个月亮按钮会一直压在日常/记账页
+          // 右下角、挡住「保存」按钮右侧，正式发给用户前必须去掉。
         ],
       ),
     );

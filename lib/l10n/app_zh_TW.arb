@@ -3763,6 +3763,7 @@
     "transactionMoveCommit": "移動",
     "transactionMoveWorking": "正在移動帳單",
     "transactionMoveDone": "已移動 {count} 筆帳單",
+    "transactionMoveRemapCleared": "其中 {cleared} 筆在目標帳本沒有同名分類，已設為未分類",
     "transactionMoveChanged": "帳本或所選帳單已變更，請重新整理後再選擇。",
     "transactionMoveUnsynced": "請先同步兩本帳本及附件，再移動帳單。",
     "transactionMovePending": "等待雲端確認。重新連線後會繼續恢復。",

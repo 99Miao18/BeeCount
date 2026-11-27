@@ -128,6 +128,7 @@ extension SyncEngineApplyExt on SyncEngine {
         await _resolveCategoryId(
           categoryName: categoryName,
           categoryKind: categoryKind,
+          ledgerId: ledgerIdInt,
         );
     String? categorySyncIdOverride;
     if (categoryId == null &&

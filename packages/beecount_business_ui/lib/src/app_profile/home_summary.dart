@@ -46,12 +46,15 @@ class BeeSummaryCard extends StatelessWidget {
                 ])),
       };
 
+  // 定制：整卡高度比上游收紧约 20%（用户反馈「太占面积」）。
+  // 只压留白与字号，不动信息层级：仍是一行期间/币种、一行「本月支出」、
+  // 一行主金额、一行收入+结余。
   Widget _full(BuildContext context) => BeeSurface(
       background: background,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 27),
+            constraints: const BoxConstraints(minHeight: 22),
             child: Row(children: [
               Expanded(
                   child: InkWell(
@@ -70,7 +73,7 @@ class BeeSummaryCard extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 11, color: Theme.of(context).hintColor))
             ])),
-        const SizedBox(height: 13),
+        const SizedBox(height: 8),
         if (amountLabel != null)
           Row(children: [
             Text(amountLabel!,
@@ -79,7 +82,7 @@ class BeeSummaryCard extends StatelessWidget {
             if (onPrivacyTap != null)
               SizedBox(
                   width: 30,
-                  height: 26,
+                  height: 22,
                   child: Semantics(
                       button: true,
                       label: privacyLabel,
@@ -92,34 +95,34 @@ class BeeSummaryCard extends StatelessWidget {
                           icon: BeeLineIcon(hidden ? 'EyeOff' : 'Eye',
                               size: 14, color: Theme.of(context).hintColor))))
           ]),
-        const SizedBox(height: 6),
+        const SizedBox(height: 2),
         Align(
             alignment: Alignment.centerLeft,
             child: BeeMoney(
                 amount: amount,
                 prefix: prefix,
                 hidden: hidden,
-                size: 36,
+                size: 32,
                 lineHeight: 1.3)),
-        const SizedBox(height: 17),
+        const SizedBox(height: 11),
         Row(children: [
           Expanded(
               child: SummaryMetric(incomeLabel, hidden ? '••••' : income,
-                  size: 15, labelSize: 11, gap: 4, lineHeight: 1.5)),
+                  size: 14, labelSize: 11, gap: 4, lineHeight: 1.5)),
           const SizedBox(width: 10),
           Expanded(
               child: SummaryMetric(expenseLabel, hidden ? '••••' : expense,
-                  size: 15,
+                  size: 14,
                   labelSize: 11,
                   gap: 4,
                   lineHeight: 1.5,
                   alignEnd: true))
         ]),
         if (budget != null) ...[
-          const SizedBox(height: 17),
+          const SizedBox(height: 12),
           Divider(
               height: 1, color: Theme.of(context).dividerColor, thickness: .6),
-          const SizedBox(height: 15),
+          const SizedBox(height: 10),
           budget!
         ],
       ]));

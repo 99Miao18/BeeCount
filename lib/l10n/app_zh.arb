@@ -4445,6 +4445,7 @@
   "transactionMoveCommit": "移动",
   "transactionMoveWorking": "正在移动账单",
   "transactionMoveDone": "已移动 {count} 笔账单",
+  "transactionMoveRemapCleared": "其中 {cleared} 笔在目标账本没有同名分类，已置为未分类",
   "transactionMoveChanged": "账本或所选账单已变更，请刷新后重新选择。",
   "transactionMoveUnsynced": "请先同步两个账本及附件，再移动账单。",
   "transactionMovePending": "等待云端确认。联网后将继续恢复。",

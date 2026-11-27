@@ -18040,6 +18040,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{Moved one transaction} other{Moved {count} transactions}}'**
   String transactionMoveDone(int count);
 
+  /// No description provided for @transactionMoveRemapCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'{cleared, plural, one{1 transaction has no category of the same name in the target ledger and is now uncategorized} other{{cleared} transactions have no category of the same name in the target ledger and are now uncategorized}}'**
+  String transactionMoveRemapCleared(int cleared);
+
   /// No description provided for @transactionMoveChanged.
   ///
   /// In en, this message translates to:

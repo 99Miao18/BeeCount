@@ -4987,6 +4987,14 @@
   "transactionMoveCommit": "Move",
   "transactionMoveWorking": "Moving transactions",
   "transactionMoveDone": "{count, plural, one{Moved one transaction} other{Moved {count} transactions}}",
+  "transactionMoveRemapCleared": "{cleared, plural, one{1 transaction has no category of the same name in the target ledger and is now uncategorized} other{{cleared} transactions have no category of the same name in the target ledger and are now uncategorized}}",
+  "@transactionMoveRemapCleared": {
+    "placeholders": {
+      "cleared": {
+        "type": "int"
+      }
+    }
+  },
   "transactionMoveChanged": "The ledger or selected transactions changed. Refresh and select again.",
   "transactionMoveUnsynced": "Sync both ledgers and their attachments before moving.",
   "transactionMovePending": "Waiting for cloud confirmation. The app will retry when it reconnects.",

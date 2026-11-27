@@ -280,11 +280,19 @@ class LocalCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<List<Category>> getTopLevelCategories(String kind) async {
-    return await (db.select(db.categories)
-          ..where((c) => c.kind.equals(kind) & c.level.equals(1) & c.parentId.isNull())
-          ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]))
-        .get();
+  Future<List<Category>> getTopLevelCategories(String kind,
+      {int? ledgerId}) async {
+    final scope = ledgerId;
+    final query = db.select(db.categories)
+      ..where((c) =>
+          c.kind.equals(kind) &
+          c.level.equals(1) &
+          c.parentId.isNull() &
+          (scope == null
+              ? const d.Constant(true)
+              : c.ledgerId.equals(scope)))
+      ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]);
+    return await query.get();
   }
 
   @override
@@ -296,11 +304,15 @@ class LocalCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<List<Category>> getUsableCategories(String kind) async {
-    final allCategories = await (db.select(db.categories)
-          ..where((c) => c.kind.equals(kind))
-          ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]))
-        .get();
+  Future<List<Category>> getUsableCategories(String kind,
+      {int? ledgerId}) async {
+    final scope = ledgerId;
+    final query = db.select(db.categories)
+      ..where((c) =>
+          c.kind.equals(kind) &
+          (scope == null ? const d.Constant(true) : c.ledgerId.equals(scope)))
+      ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]);
+    final allCategories = await query.get();
     return CategoryHierarchy.getUsableCategories(allCategories);
   }
 

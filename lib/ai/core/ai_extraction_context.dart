@@ -56,8 +56,13 @@ class AiExtractionContext {
     required BaseRepository repository,
     required int ledgerId,
   }) async {
-    final expenseCats = await repository.getUsableCategories('expense');
-    final incomeCats = await repository.getUsableCategories('income');
+    // 定制：分类严格归属账本 —— 只把**当前账本**的可选分类喂给 AI，否则
+    // 其他账本的同名分类（家庭账本的「餐饮」等）会被 AI 选中并写进本账本的
+    // 账单里，形成「账本里没这个分类却有这笔账」的脏数据。
+    final expenseCats =
+        await repository.getUsableCategories('expense', ledgerId: ledgerId);
+    final incomeCats =
+        await repository.getUsableCategories('income', ledgerId: ledgerId);
 
     final accountRefs = <AiAccountRef>[];
     var ledgerCurrency = 'CNY';

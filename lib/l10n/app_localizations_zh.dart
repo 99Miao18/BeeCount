@@ -9605,6 +9605,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String transactionMoveRemapCleared(int cleared) {
+    return '其中 $cleared 笔在目标账本没有同名分类，已置为未分类';
+  }
+
+  @override
   String get transactionMoveChanged => '账本或所选账单已变更，请刷新后重新选择。';
 
   @override
@@ -19128,6 +19133,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String transactionMoveDone(int count) {
     return '已移動 $count 筆帳單';
+  }
+
+  @override
+  String transactionMoveRemapCleared(int cleared) {
+    return '其中 $cleared 筆在目標帳本沒有同名分類，已設為未分類';
   }
 
   @override
