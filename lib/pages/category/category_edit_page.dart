@@ -23,8 +23,8 @@ import 'category_migration_page.dart';
 part 'editor/bindings/category_edit_actions.dart';
 
 /// 图标选择格边长。彩色图标自带底色块，视觉上比线框图标小一圈，整格比
-/// 默认的 24 放大 10% 找平。
-const double iconChoiceExtent = 26.5;
+/// 默认的 24 放大到 36（网格单元约 49，扣除内边距仍放得下）。
+const double iconChoiceExtent = 36;
 
 class CategoryEditPage extends ConsumerStatefulWidget {
   const CategoryEditPage(
