@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../../../data/db.dart';
 import '../category_icon_adapter.dart';
-import '../../../category/editor/bindings/category_line_icon_names.dart';
+import 'category_icon_glyph.dart';
 
 /// Map saved icon identifiers, never category names. Custom images keep their colors.
 class RecordingCategoryIcon extends StatelessWidget {
@@ -15,7 +15,6 @@ class RecordingCategoryIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final line = categoryLineIconNames[category.icon];
     if (category.iconType == 'custom') {
       return LayoutBuilder(builder: (context, constraints) {
         // A square icon tile gives both dimensions; inline rows stay at the
@@ -35,6 +34,6 @@ class RecordingCategoryIcon extends StatelessWidget {
                         BeeLineIcon('Shapes', size: size, color: color))));
       });
     }
-    return BeeLineIcon(line ?? 'Shapes', size: size, color: color);
+    return CategoryIconGlyph(icon: category.icon, size: size, color: color);
   }
 }

@@ -36,7 +36,8 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
   @override
   String _selectedCurrency = 'CNY';
   @override
-  bool _createDefaultLedger = true;
+  // 定制：首次启动不建账本，用户新建时从四套内置模板里选或自定义。
+  bool _createDefaultLedger = false;
   @override
   String _categoryMode = 'flat';
   @override

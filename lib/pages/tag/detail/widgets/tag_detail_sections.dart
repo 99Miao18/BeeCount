@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/db.dart' as db;
 import '../../../../l10n/app_localizations.dart';
 import '../../../../providers.dart';
+import '../../../../services/project/project_tags.dart';
 import '../../../../utils/category_utils.dart';
 import '../../../../utils/currencies.dart';
 import '../../../../utils/format_money.dart';
@@ -95,11 +96,12 @@ class TagDetailSections extends ConsumerWidget {
     final header =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       BeeResourceHero(
-          title: tag.name,
+          title: ProjectTags.displayName(tag.name),
           titleWidget: Align(
               alignment: Alignment.centerLeft,
               child: BeeTag(
-                  tag: BeeTagData('${tag.id}', tag.name, color),
+                  tag: BeeTagData('${tag.id}',
+                      ProjectTags.displayName(tag.name), color),
                   compact: true)),
           caption: allLedgers ? l.syncHealthGroupAll : book?.name ?? '',
           icon: BeeLineIcon('Tag', color: color),

@@ -63,7 +63,8 @@ mixin _WelcomeActions on ConsumerState<WelcomePage> {
             l10n: l,
             currency: currency,
             useHierarchicalCategories: mode == 'hierarchical',
-            skipCategories: mode == 'none',
+            // 定制：不建账本时也不生成无归属的默认分类；分类改由新建账本时套用模板。
+            skipCategories: mode == 'none' || !createLedger,
             createDefaultLedger: createLedger,
           ));
       final prefs = await SharedPreferences.getInstance();

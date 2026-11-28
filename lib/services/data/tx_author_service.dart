@@ -18,6 +18,10 @@ import '../system/logger_service.dart';
 class TxAuthorService {
   TxAuthorService._();
 
+  /// 取云端身份是纯展示信息，绝不能拖住记账保存 —— 群晖不可达时
+  /// currentUser 会走 token 刷新，而 SDK 的 HTTP 没有超时，会一直等。
+  static const _authorTimeout = Duration(seconds: 4);
+
   static Future<void> markCreated(WidgetRef ref, int txId) async =>
       _markImpl(ref, txId, isCreate: true);
 
@@ -37,9 +41,12 @@ class TxAuthorService {
     required bool isCreate,
   }) async {
     try {
-      final cloud = await ref.read(beecountCloudProviderInstance.future);
+      final cloud = await ref
+          .read(beecountCloudProviderInstance.future)
+          .timeout(_authorTimeout, onTimeout: () => null);
       if (cloud == null) return;
-      final me = await cloud.auth.currentUser;
+      final me = await cloud.auth.currentUser
+          .timeout(_authorTimeout, onTimeout: () => null);
       final userId = me?.id;
       if (userId == null || userId.isEmpty) return;
       final repo = ref.read(repositoryProvider);
@@ -61,9 +68,12 @@ class TxAuthorService {
     required bool isCreate,
   }) async {
     try {
-      final cloud = await c.read(beecountCloudProviderInstance.future);
+      final cloud = await c
+          .read(beecountCloudProviderInstance.future)
+          .timeout(_authorTimeout, onTimeout: () => null);
       if (cloud == null) return;
-      final me = await cloud.auth.currentUser;
+      final me = await cloud.auth.currentUser
+          .timeout(_authorTimeout, onTimeout: () => null);
       final userId = me?.id;
       if (userId == null || userId.isEmpty) return;
       final repo = c.read(repositoryProvider);

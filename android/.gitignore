@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# 定制版固定签名密钥库与口令：只留在本机 / CI Secrets，绝不进仓库
+custom/
+**/*.p12

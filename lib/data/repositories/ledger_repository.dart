@@ -34,9 +34,11 @@ abstract class LedgerRepository {
   });
 
   /// 创建账本
+  /// [syncId] 可选：内置账本传确定性 UUID，避免多设备各自 seed 产生重复。
   Future<int> createLedger({
     required String name,
     String currency = 'CNY',
+    String? syncId,
   });
 
   /// 更新账本名称

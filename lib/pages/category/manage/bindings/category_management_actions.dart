@@ -60,6 +60,16 @@ mixin _CategoryManagementActions on ConsumerState<CategoryManagePage> {
                 label: l.categoryClearUnused,
                 icon: const BeeLineIcon('Trash2'),
                 danger: true),
+            BeeAction(
+                id: 'multi_delete',
+                label: '多选删除分类',
+                icon: const BeeLineIcon('Trash2'),
+                danger: true),
+            BeeAction(
+                id: 'clear_ledger',
+                label: '清空当前账本分类',
+                icon: const BeeLineIcon('Trash2'),
+                danger: true),
           ], onSelected: (id) => Navigator.pop(context, id)),
         ]));
     if (!mounted) return;
@@ -79,7 +89,137 @@ mixin _CategoryManagementActions on ConsumerState<CategoryManagePage> {
       case 'clear_unused':
         await _clearUnusedCategories();
         break;
+      case 'multi_delete':
+        await _multiDeleteCategories();
+        break;
+      case 'clear_ledger':
+        await _clearCurrentLedgerCategories();
+        break;
     }
+  }
+
+  /// 定制：执行分类删除的公共逻辑（带同步与刷新）。
+  Future<void> _performDelete(List<int> ids, String successMsg) async {
+    if (ids.isEmpty) return;
+    final repo = ref.read(repositoryProvider);
+    await repo.deleteCategoriesByIds(ids);
+    final activeLedgerId = ref.read(currentLedgerIdProvider);
+    if (activeLedgerId > 0) {
+      unawaited(PostProcessor.sync(ref, ledgerId: activeLedgerId));
+    }
+    if (!mounted) return;
+    showBeeToast(context, successMsg, tone: BeeTone.success);
+    ref.invalidate(categoriesWithCountProvider);
+  }
+
+  /// 定制：多选删除——列出当前账本、当前类型(支出/收入)的分类供勾选。
+  Future<void> _multiDeleteCategories() async {
+    final kind = _tabController.index == 0 ? 'expense' : 'income';
+    final rows = ref.read(categoriesWithCountProvider).valueOrNull ?? [];
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    final candidates = rows
+        .where((r) => r.category.kind == kind && r.category.ledgerId == ledgerId)
+        .map((r) => r.category)
+        .toList();
+    if (candidates.isEmpty) {
+      if (mounted) showBeeToast(context, '当前账本没有可删除的分类');
+      return;
+    }
+    final selected = <int>{};
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (buildContext, setState) => AlertDialog(
+          title: const Text('多选删除分类'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 380,
+            child: ListView(
+              children: [
+                for (final c in candidates)
+                  CheckboxListTile(
+                    value: selected.contains(c.id),
+                    title: Text(c.name),
+                    subtitle: Text(c.parentId == null ? '一级分类' : '二级分类'),
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        selected.add(c.id);
+                      } else {
+                        selected.remove(c.id);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('取消')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('删除')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || selected.isEmpty || !mounted) return;
+    final confirm2 = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => BeeDialog(
+        title: const Text('确认删除'),
+        content: Text('确定删除选中的 ${selected.length} 个分类？此操作不可恢复。'),
+        actions: [
+          BeeButton(
+              label: '取消',
+              kind: BeeButtonKind.secondary,
+              onPressed: () => Navigator.pop(dialogContext, false)),
+          BeeButton(
+              label: '删除',
+              kind: BeeButtonKind.danger,
+              onPressed: () => Navigator.pop(dialogContext, true)),
+        ],
+      ),
+    );
+    if (confirm2 != true) return;
+    await _performDelete(selected.toList(), '已删除 ${selected.length} 个分类');
+  }
+
+  /// 定制：清空当前账本全部分类（只清当前账本，不动其他账本），二次确认。
+  Future<void> _clearCurrentLedgerCategories() async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    final rows = ref.read(categoriesWithCountProvider).valueOrNull ?? [];
+    final ids = rows
+        .where((r) => r.category.ledgerId == ledgerId)
+        .map((r) => r.category.id)
+        .toList();
+    if (ids.isEmpty) {
+      if (mounted) showBeeToast(context, '当前账本没有分类');
+      return;
+    }
+    final ledger = await ref.read(repositoryProvider).getLedgerById(ledgerId);
+    final ledgerName = ledger?.name ?? '当前账本';
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => BeeDialog(
+        title: const Text('清空当前账本分类'),
+        content: Text('确定清空「$ledgerName」的全部 ${ids.length} 个分类？\n'
+            '只影响当前账本，其他账本不受影响。此操作不可恢复。'),
+        actions: [
+          BeeButton(
+              label: '取消',
+              kind: BeeButtonKind.secondary,
+              onPressed: () => Navigator.pop(dialogContext, false)),
+          BeeButton(
+              label: '清空',
+              kind: BeeButtonKind.danger,
+              onPressed: () => Navigator.pop(dialogContext, true)),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _performDelete(ids, '已清空当前账本的 ${ids.length} 个分类');
   }
 
   Future<void> _generateDefaultCategories() async {
@@ -141,6 +281,7 @@ mixin _CategoryManagementActions on ConsumerState<CategoryManagePage> {
         l10n: l10n,
         kind: kind,
         hierarchical: useHierarchical,
+        ledgerId: ref.read(currentLedgerIdProvider),
       );
       if (!mounted) return;
       if (createdCount == 0) {
@@ -338,6 +479,7 @@ mixin _CategoryManagementActions on ConsumerState<CategoryManagePage> {
         filePath: filePath,
         repository: repo,
         mode: mode,
+        ledgerId: ref.read(currentLedgerIdProvider),
       );
 
       if (!mounted) return;

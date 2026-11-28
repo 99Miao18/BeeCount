@@ -23,6 +23,7 @@ import '../../../../utils/format_money.dart';
 import 'transaction_receipt_dialog.dart';
 import '../../../shared/scaffold/widgets/page_scaffold.dart';
 import '../../../shared/resources/bindings/recording_category_icon.dart';
+import '../../../../services/project/project_tags.dart';
 import 'transaction_detail_data.dart';
 
 class TransactionDetailControls extends ConsumerStatefulWidget {
@@ -266,7 +267,8 @@ class _TransactionDetailControlsState
                     ref.invalidate(transactionDetailDirectoryProvider))));
     final tags = [
       for (final tag in data.tags)
-        BeeTagData('${tag.id}', tag.name, _tagColor(tag.color, context))
+        BeeTagData('${tag.id}', ProjectTags.displayName(tag.name),
+            _tagColor(tag.color, context))
     ];
     final historical = data.historicalAmount, rate = data.historicalRate;
     return BeeTransactionDetail(

@@ -8,7 +8,7 @@ import '../../budget_edit_page.dart';
 import '../../../../providers.dart';
 import '../../../../providers/budget_providers.dart';
 import '../../../../utils/category_utils.dart';
-import '../../../category/editor/bindings/category_line_icon_names.dart';
+import '../../../shared/resources/bindings/category_icon_glyph.dart';
 import '../../../shared/resources/bindings/recording_category_icon.dart';
 
 bool canEditLedgerBudget(WidgetRef ref) {
@@ -118,10 +118,8 @@ class BudgetOverviewContent extends ConsumerWidget {
                     progress: item.usage.rate,
                     tone: budgetTone(item.usage),
                     icon: item.category == null
-                        ? BeeLineIcon(
-                            categoryLineIconNames[item.categoryIcon] ??
-                                'Shapes',
-                            size: 20)
+                        ? CategoryIconGlyph(
+                            icon: item.categoryIcon, size: 20)
                         : RecordingCategoryIcon(
                             category: item.category!, size: 20),
                     onTap: canEdit

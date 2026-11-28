@@ -1036,6 +1036,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryIconGroupOtherIncome => '其他收入';
 
   @override
+  String get categoryIconGroupColorful => '彩色';
+
+  @override
+  String get categoryIconGroupColorful => '彩色';
+
+  @override
   String get categoryGenerateDefault => '生成默认分类';
 
   @override
@@ -8764,7 +8770,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get v4RecordingCalculationHint => '支持 + − × ÷ 四则运算';
 
   @override
-  String get v4RecordingSaveNext => '再记一笔';
+  String get v4RecordingSaveNext => '保存并再记一笔';
 
   @override
   String get v4RecordingClearAmount => '清空金额';
@@ -9603,6 +9609,67 @@ class AppLocalizationsZh extends AppLocalizations {
   String transactionMoveDone(int count) {
     return '已移动 $count 笔账单';
   }
+
+  @override
+  String transactionMoveRemapCleared(int cleared) {
+    return '其中 $cleared 笔在目标账本没有同名分类，已置为未分类';
+  }
+  @override
+  String get projectTitle => '项目';
+
+  String get projectSubtitle => '按项目归集花销';
+
+  String get projectEmptyTitle => '还没有项目';
+
+  String get projectEmptySubtitle => '一次旅行、一件工程的账单可以单独归到一个项目里';
+
+  String get projectCreateTitle => '新建项目';
+
+  String get projectEditTitle => '编辑项目';
+
+  String get projectNameLabel => '项目名称';
+
+  String get projectNameHint => '例如：云南之行';
+
+  String get projectNameRequired => '请填写项目名称';
+
+  String get projectCreateSuccess => '项目已创建';
+
+  String get projectUpdateSuccess => '项目已更新';
+
+  String get projectDeleteConfirmTitle => '删除项目';
+
+  String projectDeleteConfirmMessage(String name) {
+    return '「${name}」会被删除，项目里的账单会保留，只去掉项目归属。';
+  }
+
+  String get projectForeignNotice => '含外币账单，金额按交易币种原值合计';
+
+  @override
+  String get projectPickTitle => '选择项目';
+
+  @override
+  String get projectClearSelection => '不归入项目';
+
+  @override
+  String get projectSectionActive => '进行中';
+
+  @override
+  String get projectSectionEnded => '已结束';
+
+  @override
+  String projectDays(int days) {
+    return '$days 天';
+  }
+
+  @override
+  String get projectAll => '全部项目';
+
+  @override
+  String get projectEndedHint => '最后一笔超过 30 天自动归到这里，不用手动结束';
+
+  @override
+  String get projectScopeHint => '项目按账本隔离：切到别的账本，只显示那个账本的项目';
 
   @override
   String get transactionMoveChanged => '账本或所选账单已变更，请刷新后重新选择。';
@@ -18458,7 +18525,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get v4RecordingCalculationHint => '支援 + − × ÷ 四則運算';
 
   @override
-  String get v4RecordingSaveNext => '再記一筆';
+  String get v4RecordingSaveNext => '儲存並再記一筆';
 
   @override
   String get v4RecordingClearAmount => '清空金額';
@@ -19129,6 +19196,67 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String transactionMoveDone(int count) {
     return '已移動 $count 筆帳單';
   }
+
+  @override
+  String transactionMoveRemapCleared(int cleared) {
+    return '其中 $cleared 筆在目標帳本沒有同名分類，已設為未分類';
+  }
+  @override
+  String get projectTitle => '項目';
+
+  String get projectSubtitle => '依項目歸集花費';
+
+  String get projectEmptyTitle => '還沒有項目';
+
+  String get projectEmptySubtitle => '一次旅行、一件工程的帳單可以單獨歸到一個項目裡';
+
+  String get projectCreateTitle => '新建項目';
+
+  String get projectEditTitle => '編輯項目';
+
+  String get projectNameLabel => '項目名稱';
+
+  String get projectNameHint => '例如：雲南之行';
+
+  String get projectNameRequired => '請填寫項目名稱';
+
+  String get projectCreateSuccess => '項目已建立';
+
+  String get projectUpdateSuccess => '項目已更新';
+
+  String get projectDeleteConfirmTitle => '刪除項目';
+
+  String projectDeleteConfirmMessage(String name) {
+    return '「${name}」會被刪除，項目裡的帳單會保留，只去掉項目歸屬。';
+  }
+
+  String get projectForeignNotice => '含外幣帳單，金額按交易幣種原值合計';
+
+  @override
+  String get projectPickTitle => '選擇項目';
+
+  @override
+  String get projectClearSelection => '不歸入項目';
+
+  @override
+  String get projectSectionActive => '進行中';
+
+  @override
+  String get projectSectionEnded => '已結束';
+
+  @override
+  String projectDays(int days) {
+    return '$days 天';
+  }
+
+  @override
+  String get projectAll => '全部項目';
+
+  @override
+  String get projectEndedHint => '最後一筆超過 30 天自動歸到這裡，不用手動結束';
+
+  @override
+  String get projectScopeHint => '專案按帳本隔離：切到別的帳本，只顯示那個帳本的專案';
 
   @override
   String get transactionMoveChanged => '帳本或所選帳單已變更，請重新整理後再選擇。';

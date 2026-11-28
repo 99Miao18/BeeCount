@@ -1084,6 +1084,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get categoryIconGroupOtherIncome => 'Прочие доходы';
 
   @override
+  String get categoryIconGroupColorful => 'Цветные';
+
+  @override
   String get categoryGenerateDefault => 'Создать стандартные категории';
 
   @override
@@ -10095,6 +10098,75 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String transactionMoveRemapCleared(int cleared) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cleared,
+      locale: localeName,
+      other:
+          '$cleared transactions have no category of the same name in the target ledger and are now uncategorized',
+      one:
+          '1 transaction has no category of the same name in the target ledger and is now uncategorized',
+    );
+    return '$_temp0';
+  }
+  @override
+  String get projectTitle => 'Projects';
+
+  String get projectSubtitle => 'Group spending by project';
+
+  String get projectEmptyTitle => 'No projects yet';
+
+  String get projectEmptySubtitle => 'Group the bills of a trip or a job into one project';
+
+  String get projectCreateTitle => 'New project';
+
+  String get projectEditTitle => 'Edit project';
+
+  String get projectNameLabel => 'Project name';
+
+  String get projectNameHint => 'e.g. Yunnan trip';
+
+  String get projectNameRequired => 'Enter a project name';
+
+  String get projectCreateSuccess => 'Project created';
+
+  String get projectUpdateSuccess => 'Project updated';
+
+  String get projectDeleteConfirmTitle => 'Delete project';
+
+  String projectDeleteConfirmMessage(String name) {
+    return 'Delete project "${name}"? Its transactions are kept and only lose the project link.';
+  }
+
+  String get projectForeignNotice => 'Includes bills in other currencies; totals are summed in their original currency';
+
+  @override
+  String get projectPickTitle => 'Выбрать проект';
+
+  @override
+  String get projectClearSelection => 'Без проекта';
+
+  @override
+  String get projectSectionActive => 'В работе';
+
+  @override
+  String get projectSectionEnded => 'Завершённые';
+
+  @override
+  String projectDays(int days) {
+    return '$days дн.';
+  }
+
+  @override
+  String get projectAll => 'Все проекты';
+
+  @override
+  String get projectEndedHint => 'Проект попадает сюда, если последняя запись старше 30 дней';
+
+  @override
+  String get projectScopeHint => 'Проекты привязаны к книге: при переключении видны только проекты этой книги';
 
   @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';

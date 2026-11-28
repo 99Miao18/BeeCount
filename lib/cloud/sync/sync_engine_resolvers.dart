@@ -52,9 +52,15 @@ extension _SyncEngineResolvers on SyncEngine {
   }
 
   /// 根据分类名和类型查找 categoryId
+  /// 按分类名反查本地 id（旧 payload 没带 categoryId 时兜底）。
+  ///
+  /// 定制：分类严格归属账本后，**必须**按 ledgerId 限定 —— 否则「餐饮」在
+  /// 家庭/旅游/蜜蜂三个账本各有一行，`getSingleOrNull()` 会抛
+  /// `Too many elements`，整批 pull 直接失败。
   Future<int?> _resolveCategoryId({
     String? categoryName,
     String? categoryKind,
+    int? ledgerId,
   }) async {
     if (categoryName == null || categoryName.isEmpty) return null;
     final query = db.select(db.categories)
@@ -62,7 +68,11 @@ extension _SyncEngineResolvers on SyncEngine {
     if (categoryKind != null) {
       query.where((c) => c.kind.equals(categoryKind));
     }
-    final cat = await query.getSingleOrNull();
+    if (ledgerId != null) {
+      final scope = ledgerId;
+      query.where((c) => c.ledgerId.equals(scope));
+    }
+    final cat = await (query..limit(1)).getSingleOrNull();
     return cat?.id;
   }
 

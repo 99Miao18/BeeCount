@@ -1,6 +1,7 @@
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' show CloudServiceStore;
 import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
 
 import '../../db.dart';
 import '../../../cloud/sync/change_tracker.dart';
@@ -10,6 +11,7 @@ import '../../../utils/app_localizations_resolver.dart';
 import '../../../services/system/logger_service.dart';
 import '../../../models/note_history.dart';
 import '../../../models/home_transaction_preview.dart';
+import '../../../models/trash_item.dart';
 import '../base_repository.dart';
 import '../account_repository.dart' show AccountBalanceUpdateResult;
 import '../budget_repository.dart';
@@ -127,8 +129,16 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<int> createLedger({required String name, String currency = 'CNY'}) =>
-      _ledgerRepo.createLedger(name: name, currency: currency);
+  Future<int> createLedger({
+    required String name,
+    String currency = 'CNY',
+    String? syncId,
+  }) =>
+      _ledgerRepo.createLedger(
+        name: name,
+        currency: currency,
+        syncId: syncId,
+      );
 
   @override
   Future<void> updateLedgerName({required int id, required String name}) =>
@@ -1351,6 +1361,7 @@ class LocalRepository extends BaseRepository {
     int level = 1,
     int? parentId,
     String? syncId,
+    int? ledgerId,
   }) async {
     final id = await _categoryRepo.createCategory(
       name: name,
@@ -1360,6 +1371,7 @@ class LocalRepository extends BaseRepository {
       level: level,
       parentId: parentId,
       syncId: syncId,
+      ledgerId: ledgerId,
     );
     if (changeTracker != null) {
       final cat = await _categoryRepo.getCategoryById(id);
@@ -1383,6 +1395,7 @@ class LocalRepository extends BaseRepository {
     String? icon,
     int? sortOrder,
     String? syncId,
+    int? ledgerId,
   }) async {
     final id = await _categoryRepo.createSubCategory(
       parentId: parentId,
@@ -1391,6 +1404,7 @@ class LocalRepository extends BaseRepository {
       icon: icon,
       sortOrder: sortOrder,
       syncId: syncId,
+      ledgerId: ledgerId,
     );
     if (changeTracker != null) {
       final cat = await _categoryRepo.getCategoryById(id);
@@ -1436,31 +1450,48 @@ class LocalRepository extends BaseRepository {
     required String kind,
     String? icon,
     int? sortOrder,
+    int? ledgerId,
   }) =>
       _categoryRepo.upsertCategory(
-          name: name, kind: kind, icon: icon, sortOrder: sortOrder);
+          name: name,
+          kind: kind,
+          icon: icon,
+          sortOrder: sortOrder,
+          ledgerId: ledgerId);
+
+  @override
+  Future<void> inheritCategoriesForLedger(
+          int targetLedgerId, List<int> sourceCategoryIds) =>
+      _categoryRepo.inheritCategoriesForLedger(
+          targetLedgerId, sourceCategoryIds);
 
   @override
   Future<Category?> getCategoryById(int categoryId) =>
       _categoryRepo.getCategoryById(categoryId);
 
   @override
-  Future<List<Category>> getTopLevelCategories(String kind) =>
-      _categoryRepo.getTopLevelCategories(kind);
+  Future<List<Category>> getTopLevelCategories(String kind, {int? ledgerId}) =>
+      _categoryRepo.getTopLevelCategories(kind, ledgerId: ledgerId);
 
   @override
   Future<List<Category>> getSubCategories(int parentId) =>
       _categoryRepo.getSubCategories(parentId);
 
   @override
-  Future<List<Category>> getUsableCategories(String kind) =>
-      _categoryRepo.getUsableCategories(kind);
+  Future<List<Category>> getUsableCategories(String kind, {int? ledgerId}) =>
+      _categoryRepo.getUsableCategories(kind, ledgerId: ledgerId);
 
   @override
   Future<bool> isCategoryNameDuplicate(
-          {required String name, required String kind, int? excludeId}) =>
+          {required String name,
+          required String kind,
+          int? excludeId,
+          int? ledgerId}) =>
       _categoryRepo.isCategoryNameDuplicate(
-          name: name, kind: kind, excludeId: excludeId);
+          name: name,
+          kind: kind,
+          excludeId: excludeId,
+          ledgerId: ledgerId);
 
   @override
   Future<bool> hasSubCategories(int categoryId) =>
@@ -1981,6 +2012,7 @@ class LocalRepository extends BaseRepository {
       final transactionType = difference > 0 ? 'income' : 'expense';
       final categoryId = await _ensureBalanceSettlementCategory(
         transactionType,
+        ledgerId,
       );
       final transactionId = await addTransaction(
         ledgerId: ledgerId,
@@ -2011,17 +2043,19 @@ class LocalRepository extends BaseRepository {
     );
   }
 
-  Future<int> _ensureBalanceSettlementCategory(String kind) async {
+  Future<int> _ensureBalanceSettlementCategory(String kind, int ledgerId) async {
     final existing = (await getAllCategories()).where(
       (category) =>
           category.name == _balanceSettlementCategoryName &&
-          category.kind == kind,
+          category.kind == kind &&
+          category.ledgerId == ledgerId,
     );
     final category = existing.isEmpty ? null : existing.first;
     if (category != null) return category.id;
     return createCategory(
       name: _balanceSettlementCategoryName,
       kind: kind,
+      ledgerId: ledgerId,
     );
   }
 
@@ -2840,6 +2874,20 @@ class LocalRepository extends BaseRepository {
       _tagRepo.watchTagsWithStats();
 
   @override
+  Stream<
+      List<
+          ({
+            Tag tag,
+            int transactionCount,
+            double expense,
+            double income,
+            int foreignCount,
+            DateTime? firstAt,
+            DateTime? lastAt,
+          })>> watchProjectUsage(int ledgerId) =>
+      _tagRepo.watchProjectUsage(ledgerId);
+
+  @override
   Stream<Tag?> watchTag(int tagId) => _tagRepo.watchTag(tagId);
 
   @override
@@ -3184,4 +3232,177 @@ class LocalRepository extends BaseRepository {
   @override
   Future<void> removeOverride({required String base, required String quote}) =>
       _exchangeRateRepo.removeOverride(base: base, quote: quote);
+
+  // ============================================
+  // 最近删除（本地回收站，30 天）
+  // ============================================
+
+  /// 回收站保留天数。改动这里会同时影响清理与页面文案。
+  static const int trashRetentionDays = 30;
+
+  @override
+  Future<void> deleteTransactionToTrash(int id) async {
+    final tx = await _transactionRepo.getTransactionById(id);
+    if (tx == null) return;
+    await _snapshotToTrash(tx);
+    // 快照落地后才真正删除（删除本身照旧登记云同步 delete 变更）
+    await deleteTransaction(id);
+  }
+
+  Future<void> _snapshotToTrash(Transaction tx) async {
+    try {
+      final category =
+          tx.categoryId == null ? null : await getCategoryById(tx.categoryId!);
+      final account =
+          tx.accountId == null ? null : await getAccount(tx.accountId!);
+      final toAccount =
+          tx.toAccountId == null ? null : await getAccount(tx.toAccountId!);
+      final tags = await getTagsForTransaction(tx.id);
+      final ledger = await getLedgerById(tx.ledgerId);
+      final item = TrashItem(
+        id: 0,
+        ledgerId: tx.ledgerId,
+        ledgerName: ledger?.name ?? '',
+        syncId: tx.syncId,
+        type: tx.type,
+        amount: tx.amount,
+        happenedAt: tx.happenedAt,
+        deletedAt: DateTime.now(),
+        note: tx.note,
+        categoryId: tx.categoryId,
+        categoryName: category?.name,
+        accountId: tx.accountId,
+        accountName: account?.name,
+        toAccountId: tx.toAccountId,
+        toAccountName: toAccount?.name,
+        currencyCode: tx.currencyCode,
+        nativeAmount: tx.nativeAmount,
+        excludeFromStats: tx.excludeFromStats,
+        excludeFromBudget: tx.excludeFromBudget,
+        tagIds: tags.map((t) => t.id).toList(),
+        tagNames: tags.map((t) => t.name).toList(),
+      );
+      await db.into(db.trashTransactions).insert(
+            TrashTransactionsCompanion.insert(
+              ledgerId: tx.ledgerId,
+              payload: jsonEncode(item.toPayload()),
+              ledgerName: d.Value(ledger?.name ?? ''),
+              syncId: d.Value(tx.syncId),
+              deletedAt: d.Value(DateTime.now()),
+            ),
+          );
+    } catch (e) {
+      // 快照失败不能挡住删除本身，最坏情况只是这笔进不了回收站。
+      logger.warning('Trash', '写入删除快照失败（不影响删除）: $e');
+    }
+  }
+
+  @override
+  Future<List<TrashItem>> getTrashItems({required int ledgerId}) async {
+    await purgeExpiredTrash();
+    final rows = await (db.select(db.trashTransactions)
+          ..where((t) => t.ledgerId.equals(ledgerId))
+          ..orderBy([
+            (t) => d.OrderingTerm.desc(t.deletedAt),
+            (t) => d.OrderingTerm.desc(t.id),
+          ]))
+        .get();
+    return rows
+        .map((r) => TrashItem.fromRow(
+              id: r.id,
+              ledgerId: r.ledgerId,
+              ledgerName: r.ledgerName,
+              syncId: r.syncId,
+              payload: r.payload,
+              deletedAt: r.deletedAt,
+            ))
+        .toList();
+  }
+
+  @override
+  Future<bool> restoreTrashItem(int trashId) async {
+    final row = await (db.select(db.trashTransactions)
+          ..where((t) => t.id.equals(trashId)))
+        .getSingleOrNull();
+    if (row == null) return false;
+    final item = TrashItem.fromRow(
+      id: row.id,
+      ledgerId: row.ledgerId,
+      ledgerName: row.ledgerName,
+      syncId: row.syncId,
+      payload: row.payload,
+      deletedAt: row.deletedAt,
+    );
+
+    // 分类/账户可能在这 30 天里被删掉或改名：还在同一账本才沿用 id。
+    int? categoryId = item.categoryId;
+    if (categoryId != null) {
+      final c = await getCategoryById(categoryId);
+      if (c == null || c.ledgerId != item.ledgerId) categoryId = null;
+    }
+    int? accountId = item.accountId;
+    if (accountId != null) {
+      final a = await getAccount(accountId);
+      if (a == null) accountId = null;
+    }
+    int? toAccountId = item.toAccountId;
+    if (toAccountId != null) {
+      final a = await getAccount(toAccountId);
+      if (a == null) toAccountId = null;
+    }
+    final existingTags = (await getAllTags()).map((t) => t.id).toSet();
+    final tagIds = item.tagIds.where(existingTags.contains).toList();
+
+    // 转账必须有两侧账户；账户被删掉后恢复出来会是一笔没有去向的转账，
+    // 宁可失败让用户在回收站里彻底删掉。
+    if (item.type == 'transfer' && (accountId == null || toAccountId == null)) {
+      logger.warning('Trash', '转账账户已删除，放弃恢复 id=$trashId');
+      return false;
+    }
+
+    // 新 syncId（addTransaction 不传就自动生成）：云端的“删除”标记已经存在，
+    // 复用旧 syncId 会在下一次同步被重新删掉。
+    final newId = await addTransaction(
+      ledgerId: item.ledgerId,
+      type: item.type,
+      amount: item.amount,
+      categoryId: categoryId,
+      accountId: accountId,
+      toAccountId: toAccountId,
+      happenedAt: item.happenedAt,
+      note: item.note,
+      excludeFromStats: item.excludeFromStats,
+      excludeFromBudget: item.excludeFromBudget,
+      currencyCode: item.currencyCode,
+      nativeAmount: item.nativeAmount,
+    );
+    if (tagIds.isNotEmpty) {
+      await updateTransactionTags(transactionId: newId, tagIds: tagIds);
+    }
+    await deleteTrashItem(trashId);
+    return true;
+  }
+
+  @override
+  Future<void> deleteTrashItem(int trashId) async {
+    await (db.delete(db.trashTransactions)
+          ..where((t) => t.id.equals(trashId)))
+        .go();
+  }
+
+  @override
+  Future<int> clearTrash({required int ledgerId}) async {
+    return (db.delete(db.trashTransactions)
+          ..where((t) => t.ledgerId.equals(ledgerId)))
+        .go();
+  }
+
+  @override
+  Future<int> purgeExpiredTrash() async {
+    final cutoff =
+        DateTime.now().subtract(const Duration(days: trashRetentionDays));
+    return (db.delete(db.trashTransactions)
+          ..where((t) => t.deletedAt.isSmallerThanValue(cutoff)))
+        .go();
+  }
 }

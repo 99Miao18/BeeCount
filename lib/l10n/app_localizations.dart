@@ -1978,6 +1978,12 @@ abstract class AppLocalizations {
   /// **'Other Income'**
   String get categoryIconGroupOtherIncome;
 
+  /// No description provided for @categoryIconGroupColorful.
+  ///
+  /// In en, this message translates to:
+  /// **'Colorful'**
+  String get categoryIconGroupColorful;
+
   /// No description provided for @categoryGenerateDefault.
   ///
   /// In en, this message translates to:
@@ -18039,6 +18045,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{Moved one transaction} other{Moved {count} transactions}}'**
   String transactionMoveDone(int count);
+
+  /// No description provided for @transactionMoveRemapCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'{cleared, plural, one{1 transaction has no category of the same name in the target ledger and is now uncategorized} other{{cleared} transactions have no category of the same name in the target ledger and are now uncategorized}}'**
+  String transactionMoveRemapCleared(int cleared);
+  /// No description provided for @projectTitle.
+  String get projectTitle;
+
+  /// No description provided for @projectSubtitle.
+  String get projectSubtitle;
+
+  /// No description provided for @projectEmptyTitle.
+  String get projectEmptyTitle;
+
+  /// No description provided for @projectEmptySubtitle.
+  String get projectEmptySubtitle;
+
+  /// No description provided for @projectCreateTitle.
+  String get projectCreateTitle;
+
+  /// No description provided for @projectEditTitle.
+  String get projectEditTitle;
+
+  /// No description provided for @projectNameLabel.
+  String get projectNameLabel;
+
+  /// No description provided for @projectNameHint.
+  String get projectNameHint;
+
+  /// No description provided for @projectNameRequired.
+  String get projectNameRequired;
+
+  /// No description provided for @projectCreateSuccess.
+  String get projectCreateSuccess;
+
+  /// No description provided for @projectUpdateSuccess.
+  String get projectUpdateSuccess;
+
+  /// No description provided for @projectDeleteConfirmTitle.
+  String get projectDeleteConfirmTitle;
+
+  /// No description provided for @projectDeleteConfirmMessage.
+  String projectDeleteConfirmMessage(String name);
+
+  /// No description provided for @projectForeignNotice.
+  String get projectForeignNotice;
+
+  /// No description provided for @projectPickTitle.
+  String get projectPickTitle;
+
+  /// No description provided for @projectClearSelection.
+  String get projectClearSelection;
+
+  /// No description provided for @projectSectionActive.
+  String get projectSectionActive;
+
+  /// No description provided for @projectSectionEnded.
+  String get projectSectionEnded;
+
+  /// No description provided for @projectDays.
+  String projectDays(int days);
+
+  /// No description provided for @projectAll.
+  String get projectAll;
+
+  /// No description provided for @projectEndedHint.
+  String get projectEndedHint;
+
+  /// No description provided for @projectScopeHint.
+  String get projectScopeHint;
+
 
   /// No description provided for @transactionMoveChanged.
   ///

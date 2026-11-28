@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/db.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/tag_providers.dart';
+import '../../../services/project/project_tags.dart';
 import '../tag_edit_page.dart';
 
 /// Real ledger resources, LRU ordering, creation permissions and draft binding.
@@ -40,7 +41,8 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
         : Color(parsed);
   }
 
-  BeeTagData _model(Tag tag) => BeeTagData('${tag.id}', tag.name, _color(tag));
+  BeeTagData _model(Tag tag) => BeeTagData(
+      '${tag.id}', ProjectTags.displayName(tag.name), _color(tag));
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +76,12 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
                       MediaQuery.viewInsetsOf(context).bottom <
                   500,
               tags: (all.valueOrNull ?? <Tag>[]).map(_model).toList(),
+              pinned: (all.valueOrNull ?? <Tag>[])
+                  .where((tag) => ProjectTags.isProject(tag.name))
+                  .map(_model)
+                  .toList(),
+              pinnedLabel: l10n.projectTitle,
+              pinnedExclusive: true,
               recent: (recent.valueOrNull ?? <Tag>[])
                   .where((tag) => visible?.contains(tag.id) == true)
                   .map(_model)

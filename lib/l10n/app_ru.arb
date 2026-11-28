@@ -298,6 +298,7 @@
   "categoryIconGroupRewardsGifts": "Награды и подарки",
   "categoryIconGroupInvestmentReturns": "Доход от инвестиций",
   "categoryIconGroupOtherIncome": "Прочие доходы",
+  "categoryIconGroupColorful": "Цветные",
   "categoryGenerateDefault": "Создать стандартные категории",
   "categoryGenerateDefaultFlat": "Без подкатегорий",
   "categoryGenerateDefaultHierarchical": "С подкатегориями",
@@ -1925,6 +1926,35 @@
   "tagSelectOwnerManaged": "Тегами совместной ведомости управляет её владелец",
   "tagSelectRecentlyUsed": "Недавние",
   "tagSelectAllTags": "Все теги",
+  "projectTitle": "Projects",
+  "projectSubtitle": "Group spending by project",
+  "projectEmptyTitle": "No projects yet",
+  "projectEmptySubtitle": "Group the bills of a trip or a job into one project",
+  "projectCreateTitle": "New project",
+  "projectEditTitle": "Edit project",
+  "projectNameLabel": "Project name",
+  "projectNameHint": "e.g. Yunnan trip",
+  "projectNameRequired": "Enter a project name",
+  "projectCreateSuccess": "Project created",
+  "projectUpdateSuccess": "Project updated",
+  "projectDeleteConfirmTitle": "Delete project",
+  "projectDeleteConfirmMessage": "Delete project \"{name}\"? Its transactions are kept and only lose the project link.",
+  "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
+  "projectPickTitle": "Выбрать проект",
+  "projectClearSelection": "Без проекта",
+  "projectSectionActive": "В работе",
+  "projectSectionEnded": "Завершённые",
+  "projectDays": "{days} дн.",
+  "projectAll": "Все проекты",
+  "projectEndedHint": "Проект попадает сюда, если последняя запись старше 30 дней",
+  "projectScopeHint": "Проекты привязаны к книге: при переключении видны только проекты этой книги",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "{count} шт.",
   "tagDetailTitle": "Сведения о теге",
   "tagDetailTotalCount": "Транзакции",

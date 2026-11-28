@@ -296,8 +296,15 @@ void main() {
     expect(summary.left, expected['summary']['x']);
     expect(summary.top, closeTo(expected['summary']['y'] as num, 1));
     expect(summary.width, expected['summary']['width']);
-    expect(summary.height, closeTo(expected['summary']['height'] as num, 1.5));
-    expect(header.top, closeTo(expected['streamHeader']['y'] as num, 1.5));
+    // 定制：汇总卡整体收紧约 20%（用户要求压缩首页头部占位面积），
+    // 因此不再逐像素对齐上游 HTML 契约高度，只锁定「约 8 折」这个设计意图。
+    final contractHeight = expected['summary']['height'] as num;
+    expect(summary.height, closeTo(contractHeight * 0.8, 14));
+    // 下面第一个流区标题的位置要跟着卡片一起上移，仍校验「紧贴卡片下方
+    // 43px 不重叠」的相对关系，而不是上游的绝对 y。
+    final cardShrink = contractHeight - summary.height;
+    expect(header.top,
+        closeTo((expected['streamHeader']['y'] as num) - cardShrink, 1.5));
     expect(find.byType(BeeIcon), findsOneWidget);
     expect(find.text('蜜蜂记账'), findsOneWidget);
     expect(find.text('2笔'), findsOneWidget);

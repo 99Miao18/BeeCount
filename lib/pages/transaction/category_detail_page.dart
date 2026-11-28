@@ -163,7 +163,7 @@ class _CategoryDetailState extends ConsumerState<CategoryDetailPage> {
       if (row == null || row.ledgerId != ledgerId) {
         throw StateError('Transaction scope changed');
       }
-      await repo.deleteTransaction(id);
+      await repo.deleteTransactionToTrash(id);
       ref.invalidate(countsForLedgerProvider(ledgerId));
       ref.read(statsRefreshProvider.notifier).state++;
       ref.read(budgetRefreshProvider.notifier).state++;

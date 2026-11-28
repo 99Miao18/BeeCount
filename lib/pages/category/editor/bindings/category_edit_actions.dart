@@ -20,8 +20,12 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     super.initState();
     final category = widget.category;
     _nameController = TextEditingController(text: category?.name ?? '');
-    _icon = categoryLineIconNames.containsKey(category?.icon)
-        ? category!.icon!
+    // 彩色图标（color:<Glyph>）也是合法值，不能因为查不到旧键就退回默认图标。
+    final savedIcon = category?.icon;
+    _icon = savedIcon != null &&
+            (CategoryIconStyle.isColored(savedIcon) ||
+                categoryLineIconNames.containsKey(savedIcon))
+        ? savedIcon
         : 'category';
     _iconSource = category?.iconType == 'custom'
         ? BeeCategoryIconSource.custom
@@ -67,7 +71,10 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     if (name.isEmpty || _busy) return;
     try {
       final result = await ref.read(repositoryProvider).isCategoryNameDuplicate(
-          name: name, kind: widget.kind, excludeId: widget.category?.id);
+          name: name,
+          kind: widget.kind,
+          excludeId: widget.category?.id,
+          ledgerId: ref.read(currentLedgerIdProvider));
       if (mounted && name == _nameController.text.trim()) {
         setState(() => _duplicate = result);
       }
@@ -89,10 +96,12 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     final repo = ref.read(repositoryProvider), l = AppLocalizations.of(context);
     final future = () async {
       var all = await repo.getTopLevelCategories(widget.kind);
+      // 定制 v38：分类严格归属账本。这里必须按当前账本过滤——每个账本都
+      // 自带一整套模板分类，不过滤的话「餐饮」「大交通」会按账本数量重复
+      // 堆成一长串，用户根本分不清哪个是当前账本的。
       if (repo is LocalRepository) {
-        final scope = await repo.db.loadLedgerPickerContext(null);
-        all = await repo.db
-            .filterCategoriesForLedger(all, scope, topLevelOnly: true);
+        final ledgerId = ref.read(currentLedgerIdProvider);
+        all = all.where((c) => c.ledgerId == ledgerId).toList();
       }
       return Future.wait(all.map((c) async {
         final count = await repo.getTransactionCountByCategory(c.id);
@@ -194,7 +203,10 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
     final name = _nameController.text.trim();
     try {
       if (await repo.isCategoryNameDuplicate(
-          name: name, kind: widget.kind, excludeId: widget.category?.id)) {
+          name: name,
+          kind: widget.kind,
+          excludeId: widget.category?.id,
+          ledgerId: ref.read(currentLedgerIdProvider))) {
         if (mounted) {
           setState(() => _duplicate = true);
           await _message(l.categorySaveError, l.categoryNameDuplicate);
@@ -209,9 +221,13 @@ mixin _CategoryEditActions on ConsumerState<CategoryEditPage> {
                     parentId: _parent!.id,
                     name: name,
                     kind: widget.kind,
-                    icon: _icon)
+                    icon: _icon,
+                    ledgerId: ref.read(currentLedgerIdProvider))
                 : await repo.createCategory(
-                    name: name, kind: widget.kind, icon: _icon));
+                    name: name,
+                    kind: widget.kind,
+                    icon: _icon,
+                    ledgerId: ref.read(currentLedgerIdProvider)));
         if (_iconSource == BeeCategoryIconSource.custom && _newImage) {
           // Promotion may remove the temporary crop; retain its saved path for a
           // retry if a later database operation rolls back. Never remove old or

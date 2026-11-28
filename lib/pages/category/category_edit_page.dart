@@ -11,16 +11,20 @@ import 'editor/bindings/category_icon_catalog.dart';
 import 'editor/bindings/category_icon_draft.dart';
 import 'editor/bindings/category_line_icon_names.dart';
 import '../shared/scaffold/widgets/page_scaffold.dart';
+import '../shared/resources/bindings/category_icon_glyph.dart';
 import '../shared/resources/bindings/recording_category_icon.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/category_utils.dart';
 import '../../data/repositories/local/local_repository.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../transaction/category_detail_page.dart';
 import 'category_migration_page.dart';
 
 part 'editor/bindings/category_edit_actions.dart';
+
+/// 图标选择格边长。彩色图标自带底色块，视觉上比线框图标小一圈，整格比
+/// 默认的 24 放大到 36（网格单元约 49，扣除内边距仍放得下）。
+const double iconChoiceExtent = 36;
 
 class CategoryEditPage extends ConsumerStatefulWidget {
   const CategoryEditPage(
@@ -39,8 +43,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
     final groups = categoryEditorIconGroups(l, widget.kind);
     BeeIconChoice<String> choice(String key) => BeeIconChoice(
         value: key,
-        label: key,
-        icon: BeeLineIcon(categoryLineIconNames[key] ?? 'Shapes', size: 22));
+        label: CategoryIconStyle.glyphOf(key),
+        icon: CategoryIconGlyph(icon: key, size: iconChoiceExtent));
     return V4PageScaffold(
         body: Column(children: [
       BeePageHeader(
@@ -153,45 +157,23 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
                           value: _icon,
                           enabled: !_busy,
                           loading: _picking,
+                          locateByValue: isEditing,
                           groups: [
                             for (var i = 0; i < groups.length; i++)
                               BeeCategoryIconGroup(
                                   id: '$i',
                                   label: groups[i].label,
                                   items:
-                                      groups[i].iconKeys.map(choice).toList())
+                                      groups[i].iconKeys.map(choice).toList(),
+                                  sections: [
+                                    for (final s in groups[i].sections)
+                                      BeeCategoryIconSection(
+                                          label: s.label,
+                                          items: s.iconKeys.map(choice).toList())
+                                  ])
                           ],
-                          commonItems: (widget.kind == 'expense'
-                                  ? [
-                                      'restaurant',
-                                      'local_cafe',
-                                      'directions_subway',
-                                      'shopping_basket',
-                                      'home',
-                                      'movie',
-                                      'book',
-                                      'favorite',
-                                      'card_giftcard',
-                                      'computer',
-                                      'fitness_center',
-                                      'pets'
-                                    ]
-                                  : [
-                                      'work',
-                                      'account_balance',
-                                      'savings',
-                                      'card_giftcard',
-                                      'paid',
-                                      'trending_up',
-                                      'wallet',
-                                      'emoji_events',
-                                      'handshake',
-                                      'undo',
-                                      'sync',
-                                      'category'
-                                    ])
-                              .map(choice)
-                              .toList(),
+                          commonItems: const [],
+                          iconExtent: iconChoiceExtent,
                           presetLabel: l.v4CategoryPresetIcons,
                           customLabel: l.categoryCustomIconTitle,
                           commonLabel: l.v4CategoryCommonIcons,

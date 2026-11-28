@@ -33,13 +33,19 @@ class LocalCategoryRepository implements CategoryRepository {
     int level = 1,
     int? parentId,
     String? syncId,
+    int? ledgerId,
   }) async {
     // 撞同名抛 DuplicateNameException((name,kind) 联合唯一,跨 kind 可同名)。caller 显式 handle:
     //   - UI 主动建 → 先过 isCategoryNameDuplicate 警告;真冲突 try/catch 弹 toast
     //   - import / 自动记账等静默路径 → 改用 upsertCategory(get-or-create)
     // 静默复用会把收入 tx 错挂到 expense 分类或吞掉 caller 传的 icon/sortOrder。
     final existing = await (db.select(db.categories)
-          ..where((c) => c.name.equals(name) & c.kind.equals(kind)))
+          ..where((c) =>
+              c.name.equals(name) &
+              c.kind.equals(kind) &
+              (ledgerId == null
+                  ? c.ledgerId.isNull()
+                  : c.ledgerId.equals(ledgerId))))
         .get();
     if (existing.isNotEmpty) {
       throw DuplicateNameException(
@@ -57,6 +63,7 @@ class LocalCategoryRepository implements CategoryRepository {
         level: d.Value(level),
         parentId: d.Value(parentId),
         syncId: d.Value(syncId ?? _uuid.v4()),
+        ledgerId: d.Value(ledgerId),
       ),
     );
   }
@@ -69,9 +76,15 @@ class LocalCategoryRepository implements CategoryRepository {
     String? icon,
     int? sortOrder,
     String? syncId,
+    int? ledgerId,
   }) async {
     final existing = await (db.select(db.categories)
-          ..where((c) => c.name.equals(name) & c.kind.equals(kind)))
+          ..where((c) =>
+              c.name.equals(name) &
+              c.kind.equals(kind) &
+              (ledgerId == null
+                  ? c.ledgerId.isNull()
+                  : c.ledgerId.equals(ledgerId))))
         .get();
     if (existing.isNotEmpty) {
       throw DuplicateNameException(
@@ -89,6 +102,7 @@ class LocalCategoryRepository implements CategoryRepository {
         level: d.Value(2),
         sortOrder: d.Value(sortOrder ?? 0),
         syncId: d.Value(syncId ?? _uuid.v4()),
+        ledgerId: d.Value(ledgerId),
       ),
     );
   }
@@ -187,10 +201,16 @@ class LocalCategoryRepository implements CategoryRepository {
     required String kind,
     String? icon,
     int? sortOrder,
+    int? ledgerId,
   }) async {
     // (name,kind) 联合唯一:按 (name,kind) 找;有则复用,无则用给定 icon/sortOrder 建。
     final existing = await (db.select(db.categories)
-          ..where((c) => c.name.equals(name) & c.kind.equals(kind)))
+          ..where((c) =>
+              c.name.equals(name) &
+              c.kind.equals(kind) &
+              (ledgerId == null
+                  ? c.ledgerId.isNull()
+                  : c.ledgerId.equals(ledgerId))))
         .get();
     if (existing.isNotEmpty) return existing.first.id;
     return db.into(db.categories).insert(CategoriesCompanion.insert(
@@ -199,7 +219,57 @@ class LocalCategoryRepository implements CategoryRepository {
       icon: d.Value(icon),
       sortOrder: d.Value(sortOrder ?? 0),
       syncId: d.Value(_uuid.v4()),
+      ledgerId: d.Value(ledgerId),
     ));
+  }
+
+  /// 定制：把默认分类复制到新账本。先复制一级，再按映射复制二级，
+  /// 每个副本都有新 syncId，并登记为 user-global change 以便同步到云端。
+  @override
+  Future<void> inheritCategoriesForLedger(
+      int targetLedgerId, List<int> sourceCategoryIds) async {
+    if (sourceCategoryIds.isEmpty) return;
+    final selected = sourceCategoryIds.toSet();
+    final rows = await (db.select(db.categories)
+          ..where((c) => c.id.isIn(selected)))
+        .get();
+    final idMap = <int, int>{};
+    final tracker = trackerGetter?.call();
+
+    Future<int> copy(Category row, int? parentId) async {
+      final newSyncId = _uuid.v4();
+      final id = await db.into(db.categories).insert(CategoriesCompanion.insert(
+            name: row.name,
+            kind: row.kind,
+            icon: d.Value(row.icon),
+            sortOrder: d.Value(row.sortOrder),
+            level: d.Value(row.level),
+            parentId: d.Value(parentId),
+            syncId: d.Value(newSyncId),
+            iconType: d.Value(row.iconType),
+            customIconPath: d.Value(row.customIconPath),
+            communityIconId: d.Value(row.communityIconId),
+            ledgerId: d.Value(targetLedgerId),
+          ));
+      await tracker?.recordUserGlobalChange(
+        entityType: 'category',
+        entityId: id,
+        entitySyncId: newSyncId,
+        action: 'create',
+      );
+      return id;
+    }
+
+    for (final row in rows.where(
+        (r) => r.parentId == null || !selected.contains(r.parentId))) {
+      idMap[row.id] = await copy(row, null);
+    }
+    for (final row in rows.where(
+        (r) => r.parentId != null && selected.contains(r.parentId))) {
+      final parent = idMap[row.parentId];
+      if (parent == null) continue;
+      idMap[row.id] = await copy(row, parent);
+    }
   }
 
   @override
@@ -210,11 +280,19 @@ class LocalCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<List<Category>> getTopLevelCategories(String kind) async {
-    return await (db.select(db.categories)
-          ..where((c) => c.kind.equals(kind) & c.level.equals(1) & c.parentId.isNull())
-          ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]))
-        .get();
+  Future<List<Category>> getTopLevelCategories(String kind,
+      {int? ledgerId}) async {
+    final scope = ledgerId;
+    final query = db.select(db.categories)
+      ..where((c) =>
+          c.kind.equals(kind) &
+          c.level.equals(1) &
+          c.parentId.isNull() &
+          (scope == null
+              ? const d.Constant(true)
+              : c.ledgerId.equals(scope)))
+      ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]);
+    return await query.get();
   }
 
   @override
@@ -226,11 +304,15 @@ class LocalCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<List<Category>> getUsableCategories(String kind) async {
-    final allCategories = await (db.select(db.categories)
-          ..where((c) => c.kind.equals(kind))
-          ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]))
-        .get();
+  Future<List<Category>> getUsableCategories(String kind,
+      {int? ledgerId}) async {
+    final scope = ledgerId;
+    final query = db.select(db.categories)
+      ..where((c) =>
+          c.kind.equals(kind) &
+          (scope == null ? const d.Constant(true) : c.ledgerId.equals(scope)))
+      ..orderBy([(c) => d.OrderingTerm(expression: c.sortOrder)]);
+    final allCategories = await query.get();
     return CategoryHierarchy.getUsableCategories(allCategories);
   }
 
@@ -239,9 +321,15 @@ class LocalCategoryRepository implements CategoryRepository {
     required String name,
     required String kind,
     int? excludeId,
+    int? ledgerId,
   }) async {
     var expression =
         db.categories.name.equals(name) & db.categories.kind.equals(kind);
+    // 定制：判重限定在同一账本作用域（同名的"餐饮"可以分别属于不同账本）。
+    expression = expression &
+        (ledgerId == null
+            ? db.categories.ledgerId.isNull()
+            : db.categories.ledgerId.equals(ledgerId));
 
     if (excludeId != null) {
       expression = expression & db.categories.id.equals(excludeId).not();
@@ -732,11 +820,12 @@ class LocalCategoryRepository implements CategoryRepository {
         c.icon_type as category_icon_type,
         c.custom_icon_path as category_custom_icon_path,
         c.community_icon_id as category_community_icon_id,
+        c.ledger_id as category_ledger_id,
         COALESCE(COUNT(t.id), 0) as transaction_count
       FROM categories c
       LEFT JOIN transactions t ON t.category_id = c.id
       WHERE c.kind != 'transfer'
-      GROUP BY c.id, c.name, c.kind, c.icon, c.sort_order, c.parent_id, c.level, c.icon_type, c.custom_icon_path, c.community_icon_id
+      GROUP BY c.id, c.name, c.kind, c.icon, c.sort_order, c.parent_id, c.level, c.icon_type, c.custom_icon_path, c.community_icon_id, c.ledger_id
       ORDER BY c.sort_order
       ''',
       readsFrom: {db.categories, db.transactions},
@@ -758,6 +847,9 @@ class LocalCategoryRepository implements CategoryRepository {
           iconType: row.read<String?>('category_icon_type') ?? 'material',
           customIconPath: row.read<String?>('category_custom_icon_path'),
           communityIconId: row.read<String?>('category_community_icon_id'),
+          // 定制 v38：把账本归属带出来，categoriesWithCountProvider 要按它
+          // 过滤出当前账本的分类（漏了这行管理页会永远是空列表）。
+          ledgerId: row.read<int?>('category_ledger_id'),
         );
         final directCount = row.read<int>('transaction_count');
         categoryMap[category.id] = (category: category, directCount: directCount);

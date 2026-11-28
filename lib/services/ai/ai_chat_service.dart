@@ -131,7 +131,7 @@ class AIChatService {
   /// Explicit UI undo, never a model-initiated mutation.
   Future<bool> undoTransaction(int transactionId) async {
     try {
-      await _repo.deleteTransaction(transactionId);
+      await _repo.deleteTransactionToTrash(transactionId);
       logger.info('AIChat', '撤销记账: id=$transactionId');
       return true;
     } catch (error, stackTrace) {

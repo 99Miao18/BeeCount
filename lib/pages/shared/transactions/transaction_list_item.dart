@@ -11,6 +11,7 @@ import '../../../utils/currencies.dart';
 import '../../../providers/database_providers.dart';
 import '../../../providers/theme_providers.dart';
 import '../../../utils/format_money.dart';
+import '../../../services/project/project_tags.dart';
 import 'bindings/transaction_row_labels.dart';
 
 class TransactionListItem extends ConsumerWidget {
@@ -170,8 +171,8 @@ class TransactionListItem extends ConsumerWidget {
       selected: isSelectionMode ? isSelected : null,
       onSelected: (_) => onSelectionChanged?.call(),
       tags: (tags ?? [])
-          .map(
-              (t) => BeeTagData('${t.id}', t.name, _tagColor(t.color, context)))
+          .map((t) => BeeTagData(
+              '${t.id}', ProjectTags.displayName(t.name), _tagColor(t.color, context)))
           .toList(),
       onTagTap:
           onTagTap == null ? null : (t) => onTagTap!(int.parse(t.id), t.label),
@@ -182,8 +183,9 @@ class TransactionListItem extends ConsumerWidget {
               runSpacing: 8,
               children: (tags ?? [])
                   .map((t) => BeeTag(
-                      tag: BeeTagData(
-                          '${t.id}', t.name, _tagColor(t.color, context)),
+                      tag: BeeTagData('${t.id}',
+                          ProjectTags.displayName(t.name),
+                          _tagColor(t.color, context)),
                       onTap: onTagTap == null
                           ? null
                           : () {

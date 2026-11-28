@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
 
+import '../../../services/project/project_tags.dart';
 import '../../db.dart';
 import '../exceptions.dart';
 import '../tag_repository.dart';
@@ -548,6 +549,77 @@ class LocalTagRepository implements TagRepository {
       }
 
       yield results;
+    }
+  }
+
+  @override
+  Stream<
+      List<
+          ({
+            Tag tag,
+            int transactionCount,
+            double expense,
+            double income,
+            int foreignCount,
+            DateTime? firstAt,
+            DateTime? lastAt,
+          })>> watchProjectUsage(int ledgerId) async* {
+    // 项目 = 前缀标签。这里 LEFT JOIN 保证「刚建还没记账」的项目也出现在列表里，
+    // 账本过滤放在 ON 上（放 WHERE 会把无账本行的项目整条过滤掉）。
+    // 已知边界：共享账本 Editor 视角的项目归属走 transaction_tag_overrides，
+    // 本聚合只覆盖主表 transaction_tags（个人账本无此情况）。
+    await for (final rows in db.customSelect(
+      '''
+      SELECT
+        t.id as tag_id,
+        t.name as tag_name,
+        t.color as tag_color,
+        t.sort_order as tag_sort_order,
+        t.created_at as tag_created_at,
+        t.sync_id as tag_sync_id,
+        COALESCE(COUNT(x.id), 0) as tx_count,
+        COALESCE(SUM(CASE WHEN x.type = 'expense' AND x.exclude_from_stats = 0
+                     THEN x.amount ELSE 0 END), 0) as expense_total,
+        COALESCE(SUM(CASE WHEN x.type = 'income' AND x.exclude_from_stats = 0
+                     THEN x.amount ELSE 0 END), 0) as income_total,
+        COALESCE(SUM(CASE WHEN x.currency_code IS NOT NULL
+                          AND x.currency_code <> (SELECT l.currency FROM ledgers l
+                                                  WHERE l.id = ?1)
+                     THEN 1 ELSE 0 END), 0) as foreign_count,
+        MIN(x.happened_at) as first_at,
+        MAX(x.happened_at) as last_at
+      FROM tags t
+      LEFT JOIN transaction_tags tt ON tt.tag_id = t.id
+      LEFT JOIN transactions x ON x.id = tt.transaction_id AND x.ledger_id = ?1
+      WHERE t.name LIKE ?2
+      GROUP BY t.id, t.name, t.color, t.sort_order, t.created_at, t.sync_id
+      ORDER BY t.sort_order, t.id
+      ''',
+      variables: [
+        d.Variable.withInt(ledgerId),
+        d.Variable.withString('${ProjectTags.prefix}%'),
+      ],
+      readsFrom: {db.tags, db.transactionTags, db.transactions, db.ledgers},
+    ).watch()) {
+      yield [
+        for (final row in rows)
+          (
+            tag: Tag(
+              id: row.read<int>('tag_id'),
+              name: row.read<String>('tag_name'),
+              color: row.read<String?>('tag_color'),
+              sortOrder: row.read<int>('tag_sort_order'),
+              createdAt: row.read<DateTime>('tag_created_at'),
+              syncId: row.read<String?>('tag_sync_id'),
+            ),
+            transactionCount: row.read<int>('tx_count'),
+            expense: row.read<double>('expense_total'),
+            income: row.read<double>('income_total'),
+            foreignCount: row.read<int>('foreign_count'),
+            firstAt: row.read<DateTime?>('first_at'),
+            lastAt: row.read<DateTime?>('last_at'),
+          ),
+      ];
     }
   }
 

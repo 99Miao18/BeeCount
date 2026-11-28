@@ -17,6 +17,7 @@ import '../../shared/scaffold/widgets/page_scaffold.dart';
 import '../../shared/selectors/ledger_selector_dialog.dart';
 import 'cloud_rule_editor.dart';
 import 'bindings/recurring_editor_controls.dart';
+import '../../../services/billing/post_processor.dart';
 import '../../../services/data/recurring_transaction_service.dart';
 
 class CloudRecurringPage extends ConsumerStatefulWidget {
@@ -147,6 +148,71 @@ class _CloudRecurringPageState extends ConsumerState<CloudRecurringPage>
     ];
   }
 
+  /// 断网时也能建/改规则：直接开本机的规则表单，写完存本地表。
+  /// 这类规则 cloudRuleId 为空，联网后由 SyncEngine 自动交接给 Cloud
+  /// （见 sync_engine_recurring.dart 的 _adoptLocalRules），交接前本机不生成流水。
+  Future<void> createLocalRule([RecurringTransaction? rule]) async {
+    final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute<bool>(
+            builder: (_) => RecurringEditorControls(recurring: rule)));
+    if (!mounted) return;
+    // 表单里可以换账本，所以把当前账本和总列表一起刷新。
+    ref.invalidate(pendingRecurringProvider(ledgerId));
+    ref.invalidate(allRecurringTransactionsProvider);
+    if (changed == true) {
+      refresh();
+      // 若此刻其实已经能连上 Cloud，立刻尝试交接，不必等下一次恢复事件。
+      unawaited(PostProcessor.sync(ref, ledgerId: ledgerId));
+    }
+  }
+
+  /// Cloud 读不到时的兜底页：说明原因 + 本机规则列表 + 新建入口 + 重试。
+  /// 服务端明确拒绝（RecurringRuleException：版本太旧、规则冲突等）不算断网，
+  /// 不给「本机建规则」这个出口，避免交出永远交接不了的本机规则。
+  Widget _unreachableBody(
+      AppLocalizations l, Object error, List<RecurringTransaction> local) {
+    final rejected = error is RecurringRuleException;
+    return ListView(padding: const EdgeInsets.all(17), children: [
+      BeeRecurringUsageNotice(
+          title: rejected
+              ? cloudRuleError(context, error)
+              : l.cloudRecurringOfflineTitle,
+          description: rejected
+              ? cloudRuleError(context, error)
+              : l.cloudRecurringOfflineHint),
+      if (local.isNotEmpty) ...[
+        Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 6),
+            child: Text(l.cloudRecurringPending,
+                style: Theme.of(context).textTheme.titleSmall)),
+        for (final rule in local)
+          ListTile(
+              title: Text(rule.note ??
+                  (rule.type == 'transfer'
+                      ? l.transferTitle
+                      : rule.type == 'income'
+                          ? l.categoryIncome
+                          : l.categoryExpense)),
+              subtitle: Text('${rule.amount} · ${ruleDate(rule.startDate)}'),
+              trailing: Text(l.cloudRecurringWaiting,
+                  style: Theme.of(context).textTheme.bodySmall),
+              onTap: busy ? null : () => createLocalRule(rule)),
+      ],
+      if (!rejected) ...[
+        const SizedBox(height: 20),
+        BeeButton(
+            label: l.cloudRecurringCreateLocal,
+            icon: const BeeLineIcon('Plus'),
+            onPressed: busy ? null : createLocalRule),
+      ],
+      Align(
+          alignment: Alignment.center,
+          child:
+              TextButton(onPressed: refresh, child: Text(l.v4RecordingRetry))),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -185,17 +251,20 @@ class _CloudRecurringPageState extends ConsumerState<CloudRecurringPage>
             BeeIconButton(
                 label: l.recurringTransactionAdd,
                 icon: const BeeLineIcon('Plus'),
-                onPressed: book != null && book.canCreate && !busy
-                    ? () => edit(book)
-                    : null),
+                // 连不上 Cloud（拿不到规则书）或只有离线缓存时，云端编辑器存不了，
+                // 退化成「先在本机建规则」，联网后由同步引擎自动交接。
+                onPressed: busy
+                    ? null
+                    : book == null || book.offline
+                        ? createLocalRule
+                        : book.canCreate
+                            ? () => edit(book)
+                            : null),
           ]),
       Expanded(
           child: data.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => BeeEmptyState(
-                  title: cloudRuleError(context, e),
-                  action:
-                      BeeButton(label: l.v4RecordingRetry, onPressed: refresh)),
+              error: (e, _) => _unreachableBody(l, e, old),
               data: (book) =>
                   ListView(padding: const EdgeInsets.all(17), children: [
                     BeeRecurringUsageNotice(

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' as d;
 import 'package:flutter/foundation.dart' show ValueChanged;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../data/db.dart';
 import '../../../../data/repositories/local/local_repository.dart';
@@ -74,8 +77,10 @@ Future<void> persistRecordingDraft(
     );
     transactionId = editingId;
     // 共享账本:本地 lastEditedByUserId 立即回填,UI 头像组直接展示
-    // 当前 user 为编辑人(否则要等 server 下次 pull 才回来)
-    await TxAuthorService.markEdited(ref, transactionId);
+    // 当前 user 为编辑人(否则要等 server 下次 pull 才回来)。
+    // 定制: 不 await —— 这一步要取云端 token,网络卡住会把「保存」按钮
+    // 一直转圈(交易其实已经写进本地库)。改后台执行,内部另有超时兜底。
+    unawaited(TxAuthorService.markEdited(ref, transactionId));
   } else {
     transactionId = await repo.addTransaction(
       ledgerId: ledgerId,
@@ -93,16 +98,25 @@ Future<void> persistRecordingDraft(
       nativeAmount: res.nativeAmount,
     );
     onCreated(transactionId);
-    // 共享账本:新建本地 tx 也回填创建人 + 编辑人(同一个 user)
-    await TxAuthorService.markCreated(ref, transactionId);
+    // 共享账本:新建本地 tx 也回填创建人 + 编辑人(同一个 user)。
+    // 定制: 同样不 await,避免保存流程阻塞在云端请求上(见上)。
+    unawaited(TxAuthorService.markCreated(ref, transactionId));
+  }
+  // 账本级账户记忆：新记的这笔用的账户记下来，下次同一账本同一种账默认就用它
+  // （编辑历史流水不动记忆，避免改一笔旧账把默认账户带偏）。
+  if (editingId == null) {
+    await rememberRecordingAccount(ledgerId, kind, res.accountId);
   }
   await _persistRecordingMetadata(ref,
       transactionId: transactionId, result: res, editing: editingId != null);
   // 统一处理：自动/手动同步与状态刷新（后台静默）
-  PostProcessor.sync(ref, ledgerId: ledgerId);
+  unawaited(PostProcessor.sync(ref, ledgerId: ledgerId));
   // 刷新：账本笔数与全局统计
   ref.invalidate(countsForLedgerProvider(ledgerId));
   ref.read(statsRefreshProvider.notifier).state++;
+  // 刷新：分类区「上次使用 / 常用」排序（刚记的这笔要立刻排到第一格）
+  ref.invalidate(
+      recordingCategoryUsageProvider((ledgerId: ledgerId, kind: kind)));
   // 刷新：预算数据
   ref.read(budgetRefreshProvider.notifier).state++;
 }
@@ -187,7 +201,8 @@ Future<void> persistTransferDraft(
   }
   await _persistRecordingMetadata(ref,
       transactionId: transactionId, result: result, editing: editingId != null);
-  await PostProcessor.sync(ref, ledgerId: ledgerId);
+  // 定制: 同步不阻塞保存按钮(同上,网络慢时会让保存一直转圈)。
+  unawaited(PostProcessor.sync(ref, ledgerId: ledgerId));
   ref.invalidate(countsForLedgerProvider(ledgerId));
   ref.read(statsRefreshProvider.notifier).state++;
 }
@@ -274,34 +289,49 @@ Future<void> _persistRecordingMetadata(
   }
 }
 
-/// 获取默认账户ID（验证币种匹配）
+/// 记账账户记忆的存储键：按「账本 + 收/支」记，值 0 表示上次明确选了
+/// 「不选择账户」。
+String recordingAccountMemoryKey(int ledgerId, String kind) =>
+    'recording_account_memory.$ledgerId.$kind';
+
+/// 保存时记下这笔用的账户，下次在同一个账本记同一种账默认就用它。
+/// 共享账本的账户是临时 id（<0），跨会话不可靠，跳过不记。
+Future<void> rememberRecordingAccount(
+    int ledgerId, String kind, int? accountId) async {
+  if (accountId != null && accountId < 0) return;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt(recordingAccountMemoryKey(ledgerId, kind), accountId ?? 0);
+}
+
+/// 获取默认账户ID（先看本账本上次用的账户，其次全局默认，最后验证币种匹配）
 Future<int?> defaultRecordingAccount(
     WidgetRef ref, String kind, int ledgerId) async {
   try {
-    // 1. 根据类型获取默认账户ID
-    final defaultAccountId = kind == 'income'
-        ? await ref.read(defaultIncomeAccountIdProvider.future)
-        : await ref.read(defaultExpenseAccountIdProvider.future);
-
-    if (defaultAccountId == null) return null;
-
-    // 2. 获取账本币种
     final ledger = await ref.read(ledgerByIdProvider(ledgerId).future);
     if (ledger == null) return null;
 
-    // 3. 获取默认账户信息
-    final account =
-        await ref.read(accountByIdProvider(defaultAccountId).future);
-    if (account == null) return null;
+    Future<bool> usable(int id) async {
+      final account = await ref.read(accountByIdProvider(id).future);
+      // 账户隐藏 #240 E3:默认账户已被隐藏时按「无默认」处理(defensive 兜底,
+      // 正常路径下隐藏时已清 pref,这里防同步竞态等边缘情况)
+      if (account == null || account.hidden) return false;
+      return account.currency == ledger.currency;
+    }
 
-    // 账户隐藏 #240 E3:默认账户已被隐藏时按「无默认」处理(defensive 兜底,
-    // 正常路径下隐藏时已清 pref,这里防同步竞态等边缘情况)
-    if (account.hidden) return null;
+    // 1. 本账本上次记账用过的账户优先（账本级记忆）
+    final prefs = await SharedPreferences.getInstance();
+    final remembered = prefs.getInt(recordingAccountMemoryKey(ledgerId, kind));
+    if (remembered != null) {
+      if (remembered == 0) return null; // 上次明确选了「不选择账户」
+      if (await usable(remembered)) return remembered;
+    }
 
-    // 4. 验证币种匹配
-    if (account.currency != ledger.currency) return null;
-
-    return defaultAccountId;
+    // 2. 全局默认账户
+    final defaultAccountId = kind == 'income'
+        ? await ref.read(defaultIncomeAccountIdProvider.future)
+        : await ref.read(defaultExpenseAccountIdProvider.future);
+    if (defaultAccountId == null) return null;
+    return await usable(defaultAccountId) ? defaultAccountId : null;
   } catch (e) {
     return null;
   }

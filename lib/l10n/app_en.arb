@@ -569,6 +569,7 @@
   "categoryIconGroupRewardsGifts": "Rewards & Gifts",
   "categoryIconGroupInvestmentReturns": "Investment Returns",
   "categoryIconGroupOtherIncome": "Other Income",
+  "categoryIconGroupColorful": "Colorful",
   "categoryGenerateDefault": "Generate Default Categories",
   "categoryGenerateDefaultFlat": "Level 1 categories",
   "categoryGenerateDefaultHierarchical": "Level 2 categories",
@@ -2825,6 +2826,42 @@
   "tagSelectOwnerManaged": "Shared ledger tags are managed by the owner",
   "tagSelectRecentlyUsed": "Recently Used",
   "tagSelectAllTags": "All Tags",
+  "projectTitle": "Projects",
+  "projectSubtitle": "Group spending by project",
+  "projectEmptyTitle": "No projects yet",
+  "projectEmptySubtitle": "Group the bills of a trip or a job into one project",
+  "projectCreateTitle": "New project",
+  "projectEditTitle": "Edit project",
+  "projectNameLabel": "Project name",
+  "projectNameHint": "e.g. Yunnan trip",
+  "projectNameRequired": "Enter a project name",
+  "projectCreateSuccess": "Project created",
+  "projectUpdateSuccess": "Project updated",
+  "projectDeleteConfirmTitle": "Delete project",
+  "projectDeleteConfirmMessage": "Delete project \"{name}\"? Its transactions are kept and only lose the project link.",
+  "@projectDeleteConfirmMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
+  "projectPickTitle": "Choose project",
+  "projectClearSelection": "No project",
+  "projectSectionActive": "In progress",
+  "projectSectionEnded": "Ended",
+  "projectDays": "{days} days",
+  "projectAll": "All projects",
+  "projectEndedHint": "Moves here automatically once the last bill is over 30 days old",
+  "projectScopeHint": "Projects stay inside their ledger: switching ledgers shows only the projects of that ledger",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "{count} transactions",
   "@tagTransactionCount": {
     "placeholders": {
@@ -3109,6 +3146,18 @@
   "calendarAddTransaction": "Add entry on this day",
   "calendarAddTransactionTooltip": "Add a record on the selected day",
   "commonUncategorized": "Uncategorized",
+  "trashTitle": "Recently deleted",
+  "trashEntryDesc": "Transactions deleted in the last 30 days",
+  "trashHint": "Deleted transactions stay on this device for 30 days, then are removed automatically. Attachments are not restored.",
+  "trashEmpty": "Trash is empty",
+  "trashEmptyHint": "Transactions you delete will show up here.",
+  "trashRestore": "Restore",
+  "trashRestored": "Restored",
+  "trashRestoreFailed": "Restore failed",
+  "trashDeleteForever": "Delete permanently",
+  "trashDeleteConfirm": "This cannot be undone. Delete this transaction permanently?",
+  "trashClearAll": "Clear all",
+  "trashClearConfirm": "This cannot be undone. Clear the trash?",
   "commonSaved": "Saved",
   "aiProviderManageTitle": "Provider Management",
   "aiProviderManageSubtitle": "Manage AI service providers",
@@ -4987,6 +5036,14 @@
   "transactionMoveCommit": "Move",
   "transactionMoveWorking": "Moving transactions",
   "transactionMoveDone": "{count, plural, one{Moved one transaction} other{Moved {count} transactions}}",
+  "transactionMoveRemapCleared": "{cleared, plural, one{1 transaction has no category of the same name in the target ledger and is now uncategorized} other{{cleared} transactions have no category of the same name in the target ledger and are now uncategorized}}",
+  "@transactionMoveRemapCleared": {
+    "placeholders": {
+      "cleared": {
+        "type": "int"
+      }
+    }
+  },
   "transactionMoveChanged": "The ledger or selected transactions changed. Refresh and select again.",
   "transactionMoveUnsynced": "Sync both ledgers and their attachments before moving.",
   "transactionMovePending": "Waiting for cloud confirmation. The app will retry when it reconnects.",
@@ -5024,6 +5081,9 @@
   "cloudRecurringConflict": "This rule has changed or is being posted. Review the latest version.",
   "cloudRecurringUpgrade": "Cannot load recurring rules for this ledger. Sync the ledger and check that the server supports recurring rules.",
   "cloudRecurringCached": "Offline · Showing cached rules. Cloud continues using the last confirmed schedule.",
+  "cloudRecurringOfflineTitle": "Can't reach Cloud",
+  "cloudRecurringOfflineHint": "You can still add rules on this device: they are stored locally and handed to Cloud automatically once you're back online. No entries are generated until the handoff completes.",
+  "cloudRecurringCreateLocal": "Add rule on this device",
   "cloudRecurringDraft": "Local draft awaiting submission",
   "cloudRecurringSaveDraft": "Save draft",
   "cloudRecurringName": "Rule name",

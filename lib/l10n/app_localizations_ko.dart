@@ -1036,6 +1036,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get categoryIconGroupOtherIncome => 'Other Income';
 
   @override
+  String get categoryIconGroupColorful => 'Colorful';
+
+  @override
   String get categoryGenerateDefault => '기본 카테고리 생성';
 
   @override
@@ -9641,6 +9644,75 @@ class AppLocalizationsKo extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String transactionMoveRemapCleared(int cleared) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cleared,
+      locale: localeName,
+      other:
+          '$cleared transactions have no category of the same name in the target ledger and are now uncategorized',
+      one:
+          '1 transaction has no category of the same name in the target ledger and is now uncategorized',
+    );
+    return '$_temp0';
+  }
+  @override
+  String get projectTitle => 'Projects';
+
+  String get projectSubtitle => 'Group spending by project';
+
+  String get projectEmptyTitle => 'No projects yet';
+
+  String get projectEmptySubtitle => 'Group the bills of a trip or a job into one project';
+
+  String get projectCreateTitle => 'New project';
+
+  String get projectEditTitle => 'Edit project';
+
+  String get projectNameLabel => 'Project name';
+
+  String get projectNameHint => 'e.g. Yunnan trip';
+
+  String get projectNameRequired => 'Enter a project name';
+
+  String get projectCreateSuccess => 'Project created';
+
+  String get projectUpdateSuccess => 'Project updated';
+
+  String get projectDeleteConfirmTitle => 'Delete project';
+
+  String projectDeleteConfirmMessage(String name) {
+    return 'Delete project "${name}"? Its transactions are kept and only lose the project link.';
+  }
+
+  String get projectForeignNotice => 'Includes bills in other currencies; totals are summed in their original currency';
+
+  @override
+  String get projectPickTitle => '프로젝트 선택';
+
+  @override
+  String get projectClearSelection => '프로젝트 없음';
+
+  @override
+  String get projectSectionActive => '진행 중';
+
+  @override
+  String get projectSectionEnded => '종료됨';
+
+  @override
+  String projectDays(int days) {
+    return '$days일';
+  }
+
+  @override
+  String get projectAll => '전체 프로젝트';
+
+  @override
+  String get projectEndedHint => '마지막 거래가 30일을 넘으면 자동으로 이곳으로 이동합니다';
+
+  @override
+  String get projectScopeHint => '프로젝트는 가계부별로 분리됩니다. 다른 가계부로 전환하면 해당 가계부의 프로젝트만 표시됩니다';
 
   @override
   String get transactionMoveChanged => 'The ledger or selected transactions changed. Refresh and select again.';

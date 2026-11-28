@@ -1697,6 +1697,35 @@
   "tagSelectOwnerManaged": "공유 원장의 태그는 소유자가 관리합니다",
   "tagSelectRecentlyUsed": "최근 사용",
   "tagSelectAllTags": "전체 태그",
+  "projectTitle": "Projects",
+  "projectSubtitle": "Group spending by project",
+  "projectEmptyTitle": "No projects yet",
+  "projectEmptySubtitle": "Group the bills of a trip or a job into one project",
+  "projectCreateTitle": "New project",
+  "projectEditTitle": "Edit project",
+  "projectNameLabel": "Project name",
+  "projectNameHint": "e.g. Yunnan trip",
+  "projectNameRequired": "Enter a project name",
+  "projectCreateSuccess": "Project created",
+  "projectUpdateSuccess": "Project updated",
+  "projectDeleteConfirmTitle": "Delete project",
+  "projectDeleteConfirmMessage": "Delete project \"{name}\"? Its transactions are kept and only lose the project link.",
+  "projectForeignNotice": "Includes bills in other currencies; totals are summed in their original currency",
+  "projectPickTitle": "프로젝트 선택",
+  "projectClearSelection": "프로젝트 없음",
+  "projectSectionActive": "진행 중",
+  "projectSectionEnded": "종료됨",
+  "projectDays": "{days}일",
+  "projectAll": "전체 프로젝트",
+  "projectEndedHint": "마지막 거래가 30일을 넘으면 자동으로 이곳으로 이동합니다",
+  "projectScopeHint": "프로젝트는 가계부별로 분리됩니다. 다른 가계부로 전환하면 해당 가계부의 프로젝트만 표시됩니다",
+  "@projectDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "tagTransactionCount": "거래 {count}건",
   "tagDetailTitle": "태그 상세",
   "tagDetailTotalCount": "거래 수",

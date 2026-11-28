@@ -18,6 +18,7 @@ abstract class CategoryRepository {
     int level = 1,
     int? parentId,
     String? syncId,
+    int? ledgerId,
   });
 
   /// 创建二级分类。撞同名同样抛 [DuplicateNameException]。
@@ -29,6 +30,7 @@ abstract class CategoryRepository {
     String? icon,
     int? sortOrder,
     String? syncId,
+    int? ledgerId,
   });
 
   /// 更新分类
@@ -57,7 +59,12 @@ abstract class CategoryRepository {
     required String kind,
     String? icon,
     int? sortOrder,
+    int? ledgerId,
   });
+
+  /// 定制：把勾选的默认分类复制到新账本（含父子关系），副本使用新 syncId。
+  Future<void> inheritCategoriesForLedger(
+      int targetLedgerId, List<int> sourceCategoryIds);
 
   /// 根据ID获取分类
   Future<Category?> getCategoryById(int categoryId);
@@ -69,19 +76,25 @@ abstract class CategoryRepository {
   Future<List<Category>> getAllCategoriesIncludingShared();
 
   /// 获取所有一级分类
-  Future<List<Category>> getTopLevelCategories(String kind);
+  ///
+  /// [ledgerId] 非空时只返回该账本的分类(定制:分类严格归属账本)。
+  /// 传 null 保持旧行为(全量),仅供确实需要跨账本的场景(导出、全局映射)。
+  Future<List<Category>> getTopLevelCategories(String kind, {int? ledgerId});
 
   /// 获取指定一级分类下的所有二级分类
   Future<List<Category>> getSubCategories(int parentId);
 
   /// 获取可用于记账的分类（叶子分类）
-  Future<List<Category>> getUsableCategories(String kind);
+  ///
+  /// [ledgerId] 语义同 [getTopLevelCategories]。
+  Future<List<Category>> getUsableCategories(String kind, {int? ledgerId});
 
   /// 检查分类名称是否重复(同 kind 内判重,跨 kind 允许同名)
   Future<bool> isCategoryNameDuplicate({
     required String name,
     required String kind,
     int? excludeId,
+    int? ledgerId,
   });
 
   /// 检查分类是否有子分类

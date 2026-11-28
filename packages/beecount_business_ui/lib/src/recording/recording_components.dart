@@ -10,6 +10,7 @@ class RecordingHeader extends StatelessWidget {
       required this.onChanged,
       required this.backLabel,
       required this.onBack,
+      this.showBackButton = true,
       this.moreLabel,
       this.onMore,
       this.height = 50})
@@ -20,6 +21,7 @@ class RecordingHeader extends StatelessWidget {
   final ValueChanged<int> onChanged;
   final String backLabel;
   final VoidCallback onBack;
+  final bool showBackButton;
   final String? moreLabel;
   final VoidCallback? onMore;
   final double height;
@@ -30,10 +32,13 @@ class RecordingHeader extends StatelessWidget {
       child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            BeeIconButton(
-                label: backLabel,
-                icon: const BeeLineIcon('ChevronLeft', size: 22),
-                onPressed: onBack),
+            if (showBackButton)
+              BeeIconButton(
+                  label: backLabel,
+                  icon: const BeeLineIcon('ChevronLeft', size: 22),
+                  onPressed: onBack)
+            else
+              const SizedBox(width: 44),
             Expanded(
                 child: Align(
                     alignment: Alignment.bottomCenter,
@@ -205,10 +210,15 @@ class RecordingDetailsCard extends StatelessWidget {
       this.account,
       this.noteToggle,
       this.categoryAction,
+      this.project,
       this.noteExpanded = true});
   final Widget note, date, tags, attachment;
   final Widget? account, noteToggle;
   final Widget? categoryAction;
+
+  /// 定制：账单的可选归属项目（记账页标签行里的独立 chip）。
+  /// 纯展示槽位，选中态与数据由宿主维护。
+  final Widget? project;
   final bool noteExpanded;
 
   @override
@@ -239,6 +249,10 @@ class RecordingDetailsCard extends StatelessWidget {
                 const SizedBox(width: 4),
               if (categoryAction == null) date else Flexible(child: date),
               const SizedBox(width: 4),
+              if (project != null) ...[
+                project!,
+                const SizedBox(width: 4),
+              ],
               if (noteExpanded || account == null || categoryAction != null)
                 Expanded(child: tags)
               else
@@ -259,6 +273,7 @@ class RecordingCategoryTile extends StatelessWidget {
       this.selected = false,
       this.expanded = false,
       this.hasChildren = false,
+      this.marker,
       this.compact = false});
   final bool compact;
   final String label;
@@ -267,6 +282,10 @@ class RecordingCategoryTile extends StatelessWidget {
   final bool selected;
   final bool expanded;
   final bool hasChildren;
+
+  /// Tiny corner badge on the icon (e.g. "last used" dot). Kept optional so the
+  /// plain category grid stays unchanged.
+  final Widget? marker;
 
   static const _iconExtent = 34.0;
   static const _labelGap = 4.0;
@@ -336,6 +355,8 @@ class RecordingCategoryTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12)),
                           child: Stack(children: [
                             Center(child: icon),
+                            if (marker != null)
+                              Positioned(top: 0, right: 0, child: marker!),
                             if (hasChildren)
                               Positioned(
                                   right: 0,
@@ -418,8 +439,12 @@ class RecordingKeypad extends StatelessWidget {
       required this.onBackspace,
       required this.onClear,
       required this.deleteLabel,
-      this.compact = false});
+      this.compact = false,
+      this.rowHeight});
   final bool compact;
+
+  /// 定制:紧凑布局下由宿主指定行高,把省下的高度让给分类区第二排。
+  final double? rowHeight;
   final ValueChanged<String> onDigit;
   final ValueChanged<String> onOperator;
   final VoidCallback onBackspace;
@@ -491,7 +516,7 @@ class RecordingKeypad extends StatelessWidget {
                                     ? onOperator(value)
                                     : onDigit(value),
                             child: SizedBox(
-                                height: compact ? 44 : 46,
+                                height: rowHeight ?? (compact ? 44 : 46),
                                 child: Center(
                                     child: value == '⌫'
                                         ? const BeeLineIcon('Delete', size: 20)

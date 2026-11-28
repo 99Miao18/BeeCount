@@ -25,7 +25,11 @@ import '../../../../utils/currencies.dart';
 import '../../../../utils/account_type_utils.dart';
 import '../../../../data/repositories/local/local_repository.dart';
 import '../../../../utils/shared_ledger_picker_filter.dart';
+import '../../../../services/project/project_tags.dart';
+import '../../../../services/project/last_project_store.dart';
+import '../../../project/project_picker_sheet.dart';
 import '../../../tag/widgets/tag_selector.dart';
+import '../../../tag/detail/bindings/tag_detail.dart' show tagDetailColor;
 import 'note_picker_dialog.dart';
 import '../../../shared/selectors/account_selector.dart';
 import '../../../shared/selectors/currency_picker_sheet.dart';
@@ -295,6 +299,10 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final String? fixedCurrencyCode;
   final String? blockedSubmitLabel;
 
+  /// 定制:内嵌记账页(底部 tab)专用。开启后备注行默认折叠、键盘行高与间距
+  /// 各收一点,把约 60px 还给分类区,才能稳定显示两排分类。
+  final bool denseLayout;
+
   const AmountEditorSheet({
     super.key,
     required this.categoryName,
@@ -324,6 +332,7 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialNativeAmount,
     this.fixedCurrencyCode,
     this.blockedSubmitLabel,
+    this.denseLayout = false,
   });
 
   @override
@@ -344,7 +353,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       _hasCardDraft ||
       (double.tryParse(_amountStr) ?? 0) != 0 ||
       _noteCtrl.text.trim().isNotEmpty ||
-      _selectedTagIds.isNotEmpty ||
+      _hasTagChanges ||
       _excludeFromStats ||
       _excludeFromBudget;
 
@@ -374,7 +383,6 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   // 备注框焦点节点
   final FocusNode _noteFocusNode = FocusNode();
   bool _noteFieldHasFocus = false;
-  bool _cardNoteExpanded = false;
 
   // 防重复提交标志
   bool _isSubmitting = false;
@@ -383,6 +391,14 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   // 已选标签ID列表
   late List<int> _selectedTagIds;
+
+  /// 标签「基线」：进入编辑器时本来就在的标签 + 自动预填的上次项目。
+  /// 用户没动过标签时，[hasContentToDiscard] 不应因为预填而报有草稿。
+  late Set<int> _tagBaseline;
+
+  bool get _hasTagChanges =>
+      _selectedTagIds.length != _tagBaseline.length ||
+      !_selectedTagIds.toSet().containsAll(_tagBaseline);
 
   // 待上传的附件列表（新建交易时）
   List<File> _pendingAttachments = [];
@@ -407,6 +423,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     _excludeFromBudget = widget.initialExcludeFromBudget;
     _selectedAccountId = widget.initialAccountId;
     _selectedTagIds = List.from(widget.initialTagIds ?? []);
+    _tagBaseline = {..._selectedTagIds};
     _pickedCurrency = widget.initialCurrencyCode?.toUpperCase();
     // 编辑外币交易:汇率行初值 = 该笔隐含汇率(nativeAmount / amount),
     // 只改备注/分类时折算基准不漂移(01 §4.2)。
@@ -440,7 +457,52 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
     // 加载最近使用的备注
     _loadRecentNotes();
+    // 新建账单时带上「这个账本上次用的项目」（编辑已有账单不预填）
+    unawaited(_restoreLastProject());
   }
+
+  /// 从偏好里取出上次用的项目，确认它仍在本账本可见标签里才并入选中集。
+  ///
+  /// 只在「新建 + 当前没有任何预置标签」时生效：编辑已有账单、复制账单、
+  /// 或其他入口显式带了 initialTagIds 时都不应被本地偏好覆盖。
+  Future<void> _restoreLastProject() async {
+    if (widget.editingTransactionId != null) return;
+    if (_selectedTagIds.isNotEmpty) return;
+    try {
+      final saved = await LastProjectStore.read(widget.ledgerId);
+      if (saved == null || !mounted || _selectedTagIds.isNotEmpty) return;
+      final all = await ref.read(tagsForCurrentLedgerProvider.future);
+      if (!mounted) return;
+      final match = _findProject(all, ids: {saved});
+      if (match == null) return;
+      setState(() {
+        _selectedTagIds = [..._selectedTagIds, match.id];
+        // 预填不算用户改动，否则一进记账页就处于「有草稿」状态。
+        _tagBaseline = {..._tagBaseline, match.id};
+      });
+    } catch (_) {
+      // 预填只是锦上添花，读失败不影响记账。
+    }
+  }
+
+  /// 在标签集合里找「已选中的那个项目」。项目单选，命中第一个即可。
+  Tag? _findProject(List<Tag> all, {Set<int>? ids}) {
+    for (final tag in all) {
+      if (!ProjectTags.isProject(tag.name)) continue;
+      if (ids != null ? ids.contains(tag.id) : _selectedTagIds.contains(tag.id)) {
+        return tag;
+      }
+    }
+    return null;
+  }
+
+  /// 记下这次保存用的项目，下一次新建账单自动带出。
+  ///
+  /// 必须在调用 `onSubmit` **之前**算好 id：宿主保存后会重建编辑器
+  /// （「保存并再记一笔」换 GlobalKey），那时本 State 已 dispose，
+  /// 再读 `_selectedTagIds` 会拿到被清空的值。
+  Future<void> _rememberProject(int? projectId) =>
+      LastProjectStore.write(widget.ledgerId, projectId);
 
   @override
   void dispose() {
@@ -793,6 +855,11 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
     HapticFeedback.lightImpact();
     SystemSound.play(SystemSoundType.click);
+    // 保存前先定住项目归属，成功后用于「下次自动带出」。
+    final rememberedProjectId =
+        _findProject(ref.read(tagsForCurrentLedgerProvider).valueOrNull ??
+                const <Tag>[])
+            ?.id;
     try {
       await widget.onSubmit((
         amount: total.abs(), // 始终正数
@@ -809,6 +876,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         currencyCode: txCurrency,
         nativeAmount: nativeAmount,
       ));
+      unawaited(_rememberProject(rememberedProjectId));
     } catch (_) {
       if (mounted) {
         showBeeToast(
@@ -1108,8 +1176,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       _pendingAttachments.isNotEmpty ||
       _excludeFromStats != widget.initialExcludeFromStats ||
       _excludeFromBudget != widget.initialExcludeFromBudget ||
-      _selectedTagIds.length != (widget.initialTagIds?.length ?? 0) ||
-      !_selectedTagIds.toSet().containsAll(widget.initialTagIds ?? []);
+      _hasTagChanges;
 
   Future<void> _confirmCardDiscard() async {
     if (_isSubmitting || _discardConfirmed) return;
@@ -1197,6 +1264,75 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     if (result != null && mounted) setState(() => _selectedTagIds = result);
   }
 
+  /// 项目 chip：单选，点开只弹项目列表（不进标签弹层）。
+  Future<void> _pickProject() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final all = ref.read(tagsForCurrentLedgerProvider).valueOrNull ?? <Tag>[];
+    final res = await ProjectPickerSheet.show(context,
+        ledgerId: widget.ledgerId, selectedTagId: _findProject(all)?.id);
+    if (res == null || !mounted) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedTagIds = [
+        for (final id in _selectedTagIds)
+          if (_findProject(all, ids: {id}) == null) id,
+        if (res.tagId != null) res.tagId!,
+      ];
+    });
+  }
+
+  /// 详情行里的项目 chip：未选是虚线「+ 项目」，选中是带颜色的项目名。
+  /// 宽度上限压得很小（<=88），否则会把这行里的标签挤没。
+  Widget _buildProjectChip(
+      BuildContext context, AppLocalizations l10n, Tag? project, bool narrow) {
+    final theme = Theme.of(context);
+    final tag = project;
+    final selected = tag != null;
+    final color = tag == null
+        ? theme.hintColor
+        : tagDetailColor(tag.color, theme.colorScheme.primary);
+    final name = tag == null ? '' : ProjectTags.displayName(tag.name);
+    return InkWell(
+        key: const ValueKey('recording-project'),
+        borderRadius: BorderRadius.circular(9),
+        onTap: _pickProject,
+        child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: narrow ? 70 : 88),
+            child: Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: narrow ? 5 : 6, vertical: 3),
+                decoration: BoxDecoration(
+                    color: selected ? color.withValues(alpha: .14) : null,
+                    border: Border.all(
+                        color: color.withValues(alpha: selected ? .55 : .45),
+                        width: .8),
+                    borderRadius: BorderRadius.circular(9)),
+                // 极窄屏（<=340dp）只留一个圆点/加号，否则这一行的
+                // 账户名和标签会被挤成省略号。
+                child: narrow
+                    ? Icon(selected ? Icons.circle : Icons.add,
+                        size: selected ? 8 : 13, color: color)
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(selected ? Icons.circle : Icons.add,
+                            size: selected ? 7 : 12, color: color),
+                        const SizedBox(width: 3),
+                        Flexible(
+                            child: Text(
+                                selected ? name : l10n.projectTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    height: 1.1,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: selected
+                                        ? theme.colorScheme.onSurface
+                                        : theme.hintColor)))
+                      ]))));
+  }
+
   Future<void> _pickCardLedger() async {
     if (widget.onLedgerChanged == null) return;
     FocusManager.instance.primaryFocus?.unfocus();
@@ -1266,10 +1402,16 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final account = _selectedAccountId == null
         ? null
         : ref.watch(_recordingAccountProvider(_selectedAccountId!)).valueOrNull;
-    final tags =
-        (ref.watch(tagsForCurrentLedgerProvider).valueOrNull ?? <Tag>[])
-            .where((tag) => _selectedTagIds.contains(tag.id))
-            .toList();
+    // 项目（带 ◆ 前缀的标签）从标签摘要里剥出来，单独占一个 chip，
+    // 避免同一行里既显示项目又显示标签导致重复。
+    final allTags =
+        ref.watch(tagsForCurrentLedgerProvider).valueOrNull ?? <Tag>[];
+    final tags = allTags
+        .where((tag) =>
+            _selectedTagIds.contains(tag.id) &&
+            !ProjectTags.isProject(tag.name))
+        .toList();
+    final projectTag = _findProject(allTags);
     final savedAttachments = widget.editingTransactionId == null
         ? <TransactionAttachment>[]
         : ref
@@ -1313,28 +1455,14 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         conversion: _txCurrency() == ref.watch(currentLedgerCurrencyProvider)
             ? null
             : _buildCurrencySection(context));
-    final noteExpanded = !compact || _cardNoteExpanded;
     final narrow = MediaQuery.sizeOf(context).width <= 340;
     final dateLabel =
         '${narrow ? '${_date.month}.${_date.day.toString().padLeft(2, '0')}' : DateFormat.MMMd(l10n.localeName).format(_date)}${ref.watch(showTransactionTimeProvider) ? ' ${_date.hour.toString().padLeft(2, '0')}:${_date.minute.toString().padLeft(2, '0')}' : ''}';
     Widget metadata(Widget? categoryAction) => RecordingDetailsCard(
           categoryAction: categoryAction,
-          noteExpanded: noteExpanded,
-          noteToggle: compact
-              ? RecordingNoteToggle(
-                  key: const ValueKey('recording-note-compact'),
-                  label: l10n.commonNoteHint,
-                  expanded: noteExpanded,
-                  onTap: () {
-                    if (noteExpanded) _noteFocusNode.unfocus();
-                    setState(() => _cardNoteExpanded = !noteExpanded);
-                    if (!noteExpanded) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) _noteFocusNode.requestFocus();
-                      });
-                    }
-                  })
-              : null,
+          // 定制：备注行常驻（两排固定高度），点一下直接输入，不再有
+          // 「展开/收起」——展开会临时加高一行，把键盘上方挤爆出红黑条。
+          noteExpanded: true,
           note: RecordingNoteField(
               fieldKey: const ValueKey('recording-note'),
               focusNode: _noteFocusNode,
@@ -1364,13 +1492,17 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               constraints: BoxConstraints(maxWidth: narrow ? 83 : 115),
               child: meta('recording-date', narrow ? '' : 'CalendarDays',
                   dateLabel, _pickDate)),
+          // 定制：项目独立 chip（与标签分开，点它只选项目）。
+          // 转账没有项目归属语义，沿用上游做法不渲染。
+          project: widget.transactionKind == 'transfer'
+              ? null
+              : _buildProjectChip(context, l10n, projectTag, narrow),
           tags: Align(
               alignment: Alignment.centerRight,
-              widthFactor: noteExpanded ? null : 1,
               child: meta(
                   'recording-tags',
                   tags.isEmpty ? 'Tag' : '',
-                  compact && !noteExpanded ? '' : l10n.tagSelectTitle,
+                  l10n.tagSelectTitle,
                   _pickCardTags,
                   child: tags.isEmpty
                       ? null
@@ -1401,6 +1533,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             details: details,
             category: widget.categorySection ?? const SizedBox.shrink(),
             fitCategory: fallback != null,
+            dense: widget.denseLayout,
             authors: widget.editingTransactionId == null
                 ? null
                 : _TxAuthorAvatars(
@@ -1412,6 +1545,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             transparentDock: PageSkinBackdropScope.contains(context),
             keypad: RecordingKeypad(
                 compact: compact,
+                rowHeight: widget.denseLayout ? 40 : null,
                 onDigit: _append,
                 onOperator: applyOp,
                 onBackspace: _backspace,
@@ -1544,7 +1678,7 @@ class AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final parsed = hex == null
         ? null
         : int.tryParse(hex.length == 6 ? 'ff$hex' : hex, radix: 16);
-    return BeeTagData('${tag.id}', tag.name,
+    return BeeTagData('${tag.id}', ProjectTags.displayName(tag.name),
         parsed == null ? Theme.of(context).colorScheme.primary : Color(parsed));
   }
 

@@ -3,25 +3,69 @@ import 'dart:io';
 import 'package:beecount/l10n/app_localizations_zh.dart';
 import 'package:beecount/pages/category/editor/bindings/category_icon_catalog.dart';
 import 'package:beecount/pages/category/editor/bindings/category_line_icon_names.dart';
+import 'package:beecount/pages/shared/resources/bindings/category_icon_glyph.dart';
 import 'package:beecount_business_ui/beecount_business_ui.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('原分类编辑页全部图标分组和持久化键保留，均有已打包的线性图标映射', () {
+  test('图标目录：分组内不再重复、全部图标已打包、历史持久化键仍可解析', () {
     final fixture = jsonDecode(
         File('test/fixtures/v4-category-icon-catalog.json')
             .readAsStringSync()) as Map;
-    final keys = <String>{};
     for (final kind in ['expense', 'income']) {
       final groups = categoryEditorIconGroups(AppLocalizationsZh(), kind);
-      expect(groups.map((g) => {'label': g.label, 'keys': g.iconKeys}).toList(),
-          fixture[kind]);
-      keys.addAll(groups.expand((g) => g.iconKeys));
+      var colorKeys = 0;
+      for (final group in groups) {
+        expect(group.iconKeys, isNotEmpty, reason: group.label);
+        // 每个场景一段：彩色排在前、单色接在后面，同一个 tab 里一屏找完。
+        expect(group.sections.length, greaterThanOrEqualTo(2),
+            reason: '${group.label} 应该有彩色段和单色段');
+        expect(
+            group.sections.first.iconKeys.every((k) => k.startsWith('color:')),
+            isTrue,
+            reason: '${group.label} 的彩色段必须排在最前');
+        for (final section in group.sections.skip(1)) {
+          expect(
+              section.iconKeys.every((k) => !k.startsWith('color:')), isTrue,
+              reason: '${group.label} 的单色段混入了彩色键');
+        }
+        // 同一段内不允许两个格子画出同一个图标（旧版的问题）；彩色与单色
+        // 画出同一个 glyph 是正常的，不算重复。
+        for (final section in group.sections) {
+          final glyphs =
+              section.iconKeys.map(CategoryIconStyle.glyphOf).toList();
+          expect(glyphs.toSet().length, glyphs.length,
+              reason: '${group.label} 段内有重复图标');
+        }
+        for (final key in group.iconKeys) {
+          if (CategoryIconStyle.isColored(key)) {
+            colorKeys++;
+            expect(CategoryIconStyle.accentOf(key), isNotNull,
+                reason: '$key 缺少强调色');
+            expect(CategoryIconStyle.glyphOf(key), isNot('Shapes'),
+                reason: '$key 的图标名无法解析');
+          } else {
+            expect(categoryLineIconNames.containsKey(key), isTrue,
+                reason: '$key 不是已知持久化键');
+          }
+          final glyph = CategoryIconStyle.glyphOf(key);
+          expect(File('packages/beecount_ui/assets/icons/$glyph.svg').existsSync(),
+              isTrue,
+              reason: '$glyph 未打包进 beecount_ui');
+        }
+      }
+      expect(colorKeys, 94, reason: '彩色图标一个不少地分摊到各场景');
     }
-    expect(keys.length, 237);
-    expect(keys.every(categoryLineIconNames.containsKey), isTrue);
+    // 老版本存下的 icon 值必须继续有效，否则升级后分类图标会集体变灰。
+    final legacy = <String>{
+      for (final kind in ['expense', 'income'])
+        ...(fixture[kind] as List)
+            .expand((g) => (g as Map)['keys'] as List)
+            .cast<String>()
+    };
+    expect(legacy.every(categoryLineIconNames.containsKey), isTrue);
   });
   for (final brightness in Brightness.values) {
     testWidgets('图标编辑保持受控选择、自定义原色插槽与小屏大字触控 $brightness', (tester) async {

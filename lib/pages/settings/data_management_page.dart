@@ -12,9 +12,11 @@ import '../data/full_data_export_page.dart';
 import '../category/category_manage_page.dart';
 import '../category/category_migration_page.dart';
 import '../tag/tag_manage_page.dart';
+import '../project/project_list_page.dart';
 import 'config_import_export_page.dart';
 import 'storage_management_page.dart';
 import '../maintenance/orphan_cleanup_page.dart';
+import 'trash_page.dart';
 
 class DataManagementPage extends ConsumerStatefulWidget {
   const DataManagementPage({super.key});
@@ -106,7 +108,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage>
                   onTap: !p.running && p.total == 0
                       ? () => open(const ImportPage())
                       : null),
-              menu(l.mineExport, 'FileDown', const ExportPage())
+              menu(l.mineExport, 'FileDown', const ExportPage()),
+              menu(l.trashTitle, 'Trash2', const TrashPage(), l.trashEntryDesc)
             ]),
             section(l.v4DataCategories, [
               menu(l.mineCategoryManagement, 'Shapes',
@@ -117,7 +120,9 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage>
                   const CategoryMigrationPage(),
                   l.mineCategoryMigrationSubtitle),
               menu(l.tagManageTitle, 'Tags', const TagManagePage(),
-                  l.tagManageSubtitle)
+                  l.tagManageSubtitle),
+              menu(l.projectTitle, 'FolderOpen', const ProjectListPage(),
+                  l.projectSubtitle)
             ]),
             section(l.v4DataConfiguration, [
               menu(l.configImportExportTitle, 'FileCog',

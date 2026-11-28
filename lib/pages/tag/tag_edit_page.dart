@@ -11,6 +11,7 @@ import 'editor/bindings/tag_editor.dart';
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/data/tag_seed_service.dart';
+import '../../services/project/project_tags.dart';
 
 class TagEditPage extends ConsumerStatefulWidget {
   const TagEditPage({super.key, this.tag});
@@ -21,7 +22,12 @@ class TagEditPage extends ConsumerStatefulWidget {
 
 class _TagEditPageState extends ConsumerState<TagEditPage> {
   final _form = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.tag?.name ?? '');
+
+  /// 项目 = 带前缀的标签（见 ProjectTags）。编辑项目时输入框只显示名字，
+  /// 保存时再把前缀补回去，避免用户看到/误删「◆」。
+  bool get _isProject => ProjectTags.isProject(widget.tag?.name);
+  late final _name = TextEditingController(
+      text: ProjectTags.displayName(widget.tag?.name ?? ''));
   late String _color = widget.tag?.color ?? TagSeedService.getRandomColor();
   bool _saving = false;
   @override
@@ -36,7 +42,14 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
     final l = AppLocalizations.of(context);
     try {
       final saved = await saveTagDraft(ref.read(repositoryProvider),
-          name: _name.text, color: _color, existing: widget.tag);
+          name: _isProject
+              // 改名时沿用原标签的账本钥匙，别把项目搬到当前账本；
+              // 旧版无钥匙的项目保持无钥匙（仍按使用账本归属）。
+              ? ProjectTags.storageName(_name.text,
+                  scope: ProjectTags.parse(widget.tag?.name ?? '').scope)
+              : _name.text,
+          color: _color,
+          existing: widget.tag);
       if (!mounted) return;
       ref.read(tagListRefreshProvider.notifier).state++;
       final ledger = ref.read(currentLedgerIdProvider);
@@ -67,7 +80,11 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
     return V4PageScaffold(
         body: Column(children: [
       BeePageHeader(
-          title: widget.tag == null ? l.tagAddTitle : l.tagEditTitle,
+          title: widget.tag == null
+              ? l.tagAddTitle
+              : _isProject
+                  ? l.projectEditTitle
+                  : l.tagEditTitle,
           leading: const BackButton(),
           actions: [
             TextButton(

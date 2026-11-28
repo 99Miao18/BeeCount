@@ -106,6 +106,9 @@ class Categories extends Table {
   TextColumn get customIconPath => text().nullable()(); // 自定义图标本地路径
   TextColumn get communityIconId => text().nullable()(); // 社区图标ID（预留）
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
+  // 定制：分类严格归属账本。v38 迁移后老数据的 NULL 已归到默认账本；
+  // 仅虚拟转账分类等极少数内部行仍保持 NULL，不出现在账本分类列表中。
+  IntColumn get ledgerId => integer().nullable()();
 }
 
 class Transactions extends Table {
@@ -153,6 +156,23 @@ class Transactions extends Table {
   /// 单币种/未折算 == amount(隐含汇率 1.0)。账本维度统计读本列(?? amount),
   /// 账户维度(余额等)仍读 amount。
   RealColumn get nativeAmount => real().nullable()();
+}
+
+/// 「最近删除」：用户删除交易时的快照，保留 30 天，可恢复。
+///
+/// 只存在于本地（不参与云同步）——云端删除是立即物理删除，恢复相当于把这笔
+/// 重新记一遍（恢复时生成新的 syncId，不会和云端的删除标记打架）。
+/// 名称类字段（分类/账户/标签）随快照一起存，删除后即使分类改名或删掉，
+/// 回收站里也能显示当时的样子。
+class TrashTransactions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get ledgerId => integer()();
+  TextColumn get ledgerName => text().withDefault(const Constant(''))();
+  TextColumn get syncId => text().nullable()();
+
+  /// 快照 JSON（金额、类型、时间、备注、分类/账户/标签 id 与名称、币种等）。
+  TextColumn get payload => text()();
+  DateTimeColumn get deletedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 class RecurringTransactions extends Table {
@@ -494,6 +514,7 @@ class SharedLedgerTags extends Table {
   Accounts,
   Categories,
   Transactions,
+  TrashTransactions,
   RecurringTransactions,
   Conversations,
   Messages,
@@ -526,7 +547,7 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 36; // 自动接管时保留需要人工核对的原因
+  int get schemaVersion => 39; // v39: 最近删除（本地回收站，30 天可恢复）
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1290,6 +1311,32 @@ class BeeDatabase extends _$BeeDatabase {
           if (from < 36) {
             await _addColumnIfMissing('recurring_transactions', 'cloud_handoff_issue',
                 'ALTER TABLE recurring_transactions ADD COLUMN cloud_handoff_issue TEXT;');
+          }
+          if (from < 37) {
+            // v37: 新增账本归属列。当时先留 NULL 保证升级不破坏老数据。
+            await _addColumnIfMissing('categories', 'ledger_id',
+                'ALTER TABLE categories ADD COLUMN ledger_id INTEGER;');
+          }
+          if (from < 38) {
+            // v38: 取消"通用分类"——所有 ledger_id 为 NULL 的老分类归到
+            // 最早创建的那个账本(id 最小，通常是升级前的默认账本)。
+            // 这样每个分类都严格属于一个账本，删一个账本的分类不再影响其他账本。
+            // 库中没有任何账本时(极端空库)跳过。
+            final defaultLedger = await customSelect(
+                    'SELECT id FROM ledgers ORDER BY id ASC LIMIT 1')
+                .get();
+            if (defaultLedger.isNotEmpty) {
+              final defaultId = defaultLedger.first.read<int>('id');
+              // 虚拟转账分类（kind=transfer）仅供图标使用，保持 NULL。
+              await customStatement(
+                  'UPDATE categories SET ledger_id = ? '
+                  'WHERE ledger_id IS NULL AND kind <> ?',
+                  [defaultId, 'transfer']);
+            }
+          }
+          if (from < 39) {
+            // v39: 本地「最近删除」（回收站）。纯本地表，不参与同步。
+            await migrator.createTable(trashTransactions);
           }
         },
         onCreate: (m) async {

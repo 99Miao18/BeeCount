@@ -9,6 +9,7 @@ import 'detail/widgets/tag_detail_sections.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../services/billing/post_processor.dart';
+import '../../services/project/project_tags.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/month_range.dart';
 import '../shared/pickers/wheel_date_picker.dart';
@@ -63,9 +64,16 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
   Future<void> _deleteTag(db.Tag tag) async {
     if (_deleting) return;
     final l = AppLocalizations.of(context);
+    // 项目 = 带前缀的标签（ProjectTags），删除文案要说"项目"，否则用户会以为
+    // 自己在删标签、进而担心账单受影响。
+    final isProject = ProjectTags.isProject(tag.name);
     final confirmed = await showBeeConfirm(context,
-        title: l.tagDeleteConfirmTitle,
-        message: l.tagDeleteConfirmMessage(tag.name),
+        title:
+            isProject ? l.projectDeleteConfirmTitle : l.tagDeleteConfirmTitle,
+        message: isProject
+            ? l.projectDeleteConfirmMessage(
+                ProjectTags.displayName(tag.name))
+            : l.tagDeleteConfirmMessage(tag.name),
         confirmLabel: l.commonDelete,
         cancelLabel: l.commonCancel,
         danger: true);
@@ -95,7 +103,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       if (transaction == null || transaction.ledgerId != sourceLedgerId) {
         throw StateError('Transaction scope changed');
       }
-      await repo.deleteTransaction(id);
+      await repo.deleteTransactionToTrash(id);
       await PostProcessor.sync(ref, ledgerId: sourceLedgerId);
       ref.invalidate(countsForLedgerProvider(sourceLedgerId));
       ref.read(statsRefreshProvider.notifier).state++;
@@ -144,7 +152,9 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     return V4PageScaffold(
         body: Column(children: [
       BeePageHeader(
-          title: l.tagDetailTitle,
+          title: ProjectTags.isProject(tag.valueOrNull?.name)
+              ? l.projectTitle
+              : l.tagDetailTitle,
           leading: const BackButton(),
           actions: [
             BeeIconButton(

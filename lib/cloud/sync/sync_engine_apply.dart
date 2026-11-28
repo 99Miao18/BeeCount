@@ -128,6 +128,7 @@ extension SyncEngineApplyExt on SyncEngine {
         await _resolveCategoryId(
           categoryName: categoryName,
           categoryKind: categoryKind,
+          ledgerId: ledgerIdInt,
         );
     String? categorySyncIdOverride;
     if (categoryId == null &&
@@ -448,6 +449,18 @@ extension SyncEngineApplyExt on SyncEngine {
     final iconType = payload['iconType'] as String? ?? 'material';
     final parentName = payload['parentName'] as String?;
     final parentSyncId = (payload['parentSyncId'] as String?)?.trim();
+    // 定制：分类归属账本。server 只透传该 key，不参与投影；App 间按 syncId 还原。
+    // 旧端发来的 payload 没有该 key：保留本地已有归属，避免同步一次就把分类
+    // 变成「无账本」而消失（新增行仍为 NULL，等带 key 的增量同步再补齐）。
+    final categoryLedgerSyncId = payload['ledgerSyncId'] as String?;
+    int? categoryLedgerId = existing?.ledgerId;
+    if (categoryLedgerSyncId != null && categoryLedgerSyncId.isNotEmpty) {
+      final ownerLedger = await (db.select(db.ledgers)
+            ..where((l) => l.syncId.equals(categoryLedgerSyncId)))
+          .getSingleOrNull();
+      // 账本可能还没拉到本地，此时保留旧值，等下次同步重新对齐。
+      categoryLedgerId = ownerLedger?.id ?? existing?.ledgerId;
+    }
 
     // 名称是展示/旧协议兜底；有稳定 ID 时不按过期名字挂到另一个分类。
     int? parentId;
@@ -541,6 +554,7 @@ extension SyncEngineApplyExt on SyncEngine {
         customIconPath: d.Value(resolvedCustomIconPath),
         communityIconId: d.Value(payload['communityIconId'] as String?),
         parentId: d.Value(parentId),
+        ledgerId: d.Value(categoryLedgerId),
       ));
       logger.debug('SyncEngine', 'pull: 更新分类 $syncId');
     } else {
@@ -556,6 +570,7 @@ extension SyncEngineApplyExt on SyncEngine {
               communityIconId: d.Value(payload['communityIconId'] as String?),
               parentId: d.Value(parentId),
               syncId: d.Value(syncId),
+              ledgerId: d.Value(categoryLedgerId),
             ),
           );
       activePullCache?.putCategory(syncId, localCategoryId);

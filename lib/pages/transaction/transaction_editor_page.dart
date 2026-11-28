@@ -22,6 +22,8 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   final String initialKind; // 'expense', 'income', or 'transfer'
   // Retained for existing callers; recording now opens the full editor.
   final bool quickAdd;
+  // 定制：作为底部导航 tab 内嵌时隐藏左上角返回按钮。
+  final bool embedded;
 
   final int? initialCategoryId;
   final String? initialNote; // 用于金额输入弹窗回填备注
@@ -42,6 +44,7 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     this.isCopy = false,
     required this.initialKind,
     this.quickAdd = false,
+    this.embedded = false,
     this.initialCategoryId,
     this.initialNote,
     this.initialAmount,
@@ -153,6 +156,22 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
   }
 
+  /// 系统输入法（软键盘）是否真的顶起了窗口。
+  ///
+  /// 不能读 `MediaQuery.viewInsetsOf(context)`：主壳 Scaffold 开了
+  /// resizeToAvoidBottomInset，会把 body 的 viewInsets 清掉，页面里再读永远是
+  /// 0。结果就是键盘已经弹起、记账页仍然渲染着数字键盘 —— 两块键盘叠在一起，
+  /// 中间再被压到装不下，就出现 Bottom overflowed（红黑条）。
+  /// 这里直接读 FlutterView 的原始 inset，绕开 MediaQuery 的裁剪。
+  static bool _imeVisible(BuildContext context) {
+    final view = View.maybeOf(context);
+    if (view == null) {
+      return MediaQuery.viewInsetsOf(context).bottom > kMinInteractiveDimension;
+    }
+    return view.viewInsets.bottom / view.devicePixelRatio >
+        kMinInteractiveDimension;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -172,6 +191,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         ? 4
         : ref.watch(recordingCategoryColumnsProvider
             .select((preference) => preference.valueOrNull ?? 4));
+    // 内嵌在底部 tab 时页面常驻，initState 里读到的账本会过期：明细页换了
+    // 账本，这里要跟着换，否则分类和账户还是旧账本的。
+    ref.listen<int>(currentLedgerIdProvider, (previous, next) {
+      if (previous == next || next == _cardLedgerId) return;
+      _followActiveLedger(next);
+    });
     return Theme(
       data: theme.copyWith(
           textButtonTheme: TextButtonThemeData(
@@ -213,6 +238,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                   ],
                   selectedIndex: _selectedType,
                   backLabel: l10n.commonBack,
+                  showBackButton: !widget.embedded,
                   onBack: () => Navigator.maybePop(context),
                   moreLabel: l10n.txFlagMoreOptions,
                   onMore: kind == 'transfer'
@@ -231,9 +257,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                         : kind == 'transfer'
                             ? TransferForm(
                                 key: _transferEditorKey,
-                                systemKeyboardVisible:
-                                    MediaQuery.viewInsetsOf(context).bottom >
-                                        kMinInteractiveDimension,
+                                systemKeyboardVisible: _imeVisible(context),
                                 onSavingChanged: (saving) {
                                   if (mounted) {
                                     setState(() => _cardSaving = saving);
@@ -259,11 +283,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
                             : AmountEditorSheet(
                                 key: _cardEditorKey,
                                 cardLayout: true,
-                                systemKeyboardVisible:
-                                    // Some floating/minimized IMEs report a
-                                    // 1px inset without covering the editor.
-                                    MediaQuery.viewInsetsOf(context).bottom >
-                                        kMinInteractiveDimension,
+                                denseLayout: widget.embedded,
+                                systemKeyboardVisible: _imeVisible(context),
                                 categoryName: _cardCategory?.name ?? '',
                                 categoryId: _cardCategory?.id,
                                 categorySyncId: (_cardCategory?.id ?? 0) < 0
@@ -332,10 +353,43 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     );
   }
 
+  /// 其它页面（明细/洞察等）切换了账本：把记账页的草稿切到新账本的上下文。
+  /// 只换账本本身，不反写 provider（provider 已经是新值）。
+  Future<void> _followActiveLedger(int ledgerId) async {
+    if (widget.editingTransactionId != null || widget.isCopy) return;
+    // 转账由 TransferForm 自己跟随账本，这里只处理收/支的默认账户。
+    final kind = _selectedType == 1
+        ? 'income'
+        : _selectedType == 2
+            ? 'transfer'
+            : 'expense';
+    final accountId = kind == 'transfer'
+        ? null
+        : await defaultRecordingAccount(ref, kind, ledgerId);
+    if (!mounted ||
+        ref.read(currentLedgerIdProvider) != ledgerId ||
+        _cardSaving) {
+      return;
+    }
+    _moreCategoriesFallback.value = null;
+    setState(() {
+      _cardLedgerId = ledgerId;
+      _cardInitialAccountId = accountId;
+      _cardCategory = null;
+      _cardDirty = false;
+      _cardReset = true;
+      _cardInitialDate = DateTime.now();
+      _retryTransactionId = null;
+      _cardEditorKey = GlobalKey<AmountEditorSheetState>();
+    });
+  }
+
   Future<void> _changeCardLedger(int ledgerId) async {
     final kind = _selectedType == 1 ? 'income' : 'expense';
     final accountId = await defaultRecordingAccount(ref, kind, ledgerId);
     if (!mounted) return;
+    // 先认账再写 provider：否则全局监听会把它当成「外部切换」再重置一次。
+    _cardLedgerId = ledgerId;
     ref.read(currentLedgerIdProvider.notifier).state = ledgerId;
     _moreCategoriesFallback.value = null;
     setState(() {
@@ -407,6 +461,18 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     });
   }
 
+  /// 保存完成后清空本次草稿，下一次记账从空白开始。
+  void _resetCardDraft() {
+    setState(() {
+      _cardEditorKey = GlobalKey<AmountEditorSheetState>();
+      _cardReset = true;
+      _cardCategory = null;
+      _cardDirty = false;
+      _retryTransactionId = null;
+      _cardInitialDate = DateTime.now();
+    });
+  }
+
   Future<void> _saveTransaction(
     Category c,
     String kind,
@@ -425,25 +491,21 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       updateAppWidget(ref, context);
     }
     _retryTransactionId = null;
-    if (res.continueAdding && mounted) {
-      setState(() {
-        _cardEditorKey = GlobalKey<AmountEditorSheetState>();
-        _cardReset = true;
-        _cardCategory = null;
-        _cardDirty = false;
-        _retryTransactionId = null;
-        _cardInitialDate = DateTime.now();
-      });
-    }
-    if (!res.continueAdding && mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-    if (res.continueAdding && mounted) {
+    if (!mounted) return;
+    if (res.continueAdding) {
+      _resetCardDraft();
       showBeeToast(
         context,
         AppLocalizations.of(context).transactionSavedNextCategory,
         tone: BeeTone.success,
       );
+    } else if (widget.embedded) {
+      // 内嵌在底部 tab 时没有可 pop 的路由：清空草稿，切回「明细」tab，
+      // 让用户立刻看到刚记的那一笔（需求：保存后回明细）。
+      _resetCardDraft();
+      ref.read(bottomTabIndexProvider.notifier).state = 0;
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
     // 反馈：轻微触感 + 系统点击音
     HapticFeedback.lightImpact();

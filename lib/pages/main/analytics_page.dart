@@ -1,5 +1,6 @@
 import '../ai/ai_chat_page.dart';
 import '../report/annual_report_page.dart';
+import 'package:beecount_business_ui/beecount_business_ui.dart';
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,9 @@ import '../../utils/month_range.dart';
 import 'analytics/bindings/analytics_data.dart';
 import 'analytics/widgets/analytics_content.dart';
 import '../shared/scaffold/widgets/page_scaffold.dart';
+import '../shared/selectors/ledger_picker_sheet.dart';
+import '../shared/branding/bee_artwork.dart';
+import '../../utils/format_utils.dart';
 part 'analytics/bindings/analytics_actions.dart';
 
 class AnalyticsPage extends ConsumerStatefulWidget {
@@ -38,49 +42,70 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage>
       _query = loadAnalyticsViews(repo,
           ledgerId: id, scope: _scope, selMonth: month, startDay: sd);
     }
+    final actions = <Widget>[
+      TextButton.icon(
+          label: const Text('AI', style: TextStyle(fontSize: 13)),
+          icon: const BeeLineIcon('Sparkles', size: 17),
+          onPressed: () async {
+            final type = _type, scope = _scope;
+            final views = await _query!
+                .onError((_, __) => <String, AnalyticsResult>{});
+            if (!context.mounted ||
+                id != ref.read(currentLedgerIdProvider) ||
+                type != _type ||
+                scope != _scope ||
+                month != ref.read(selectedMonthProvider)) {
+              return;
+            }
+            final data = views[type];
+            await Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                    builder: (_) => AIChatPage(view: {
+                          if (data != null) ...{
+                            'source': 'insights',
+                            'ledgerId': id,
+                            'scope': scope,
+                            'flow': type,
+                            'start': data.start.toIso8601String(),
+                            'end': data.end.toIso8601String(),
+                          }
+                        })));
+          }),
+      BeeIconButton(
+          label: l.sharePosterShare,
+          icon: const BeeLineIcon('Share2'),
+          onPressed: _share)
+    ];
+    final ledger = ref.watch(currentLedgerProvider).valueOrNull;
     return V4PageScaffold(
         body: Column(children: [
-      BeePageHeader(
-          title: l.tabInsights,
-          compact: true,
-          padding:
-              EdgeInsets.symmetric(horizontal: compact ? 17 : 20, vertical: 8),
-          leading: widget.showBack ? const BackButton() : null,
-          actions: [
-            TextButton.icon(
-                label: const Text('AI', style: TextStyle(fontSize: 13)),
-                icon: const BeeLineIcon('Sparkles', size: 17),
-                onPressed: () async {
-                  final type = _type, scope = _scope;
-                  final views = await _query!
-                      .onError((_, __) => <String, AnalyticsResult>{});
-                  if (!context.mounted ||
-                      id != ref.read(currentLedgerIdProvider) ||
-                      type != _type ||
-                      scope != _scope ||
-                      month != ref.read(selectedMonthProvider)) {
-                    return;
-                  }
-                  final data = views[type];
-                  await Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                          builder: (_) => AIChatPage(view: {
-                                if (data != null) ...{
-                                  'source': 'insights',
-                                  'ledgerId': id,
-                                  'scope': scope,
-                                  'flow': type,
-                                  'start': data.start.toIso8601String(),
-                                  'end': data.end.toIso8601String(),
-                                }
-                              })));
-                }),
-            BeeIconButton(
-                label: l.sharePosterShare,
-                icon: const BeeLineIcon('Share2'),
-                onPressed: _share)
-          ]),
+      if (widget.showBack)
+        BeePageHeader(
+            title: l.tabInsights,
+            compact: true,
+            padding:
+                EdgeInsets.symmetric(horizontal: compact ? 17 : 20, vertical: 8),
+            leading: const BackButton(),
+            actions: actions)
+      else
+        // 与明细页一致：标题旁直接挂账本名，点它就能换账本。
+        BeePageHeader(
+            title: l.tabInsights,
+            showTitle: false,
+            padding:
+                EdgeInsets.symmetric(horizontal: compact ? 17 : 20, vertical: 8),
+            content: BeeHomeIdentity(
+                name: l.homeAppTitle,
+                pageTitle: l.tabInsights,
+                ledger: ledger == null
+                    ? l.ledgersNew
+                    : translateLedgerName(context, ledger.name),
+                logo: BeeIcon(
+                    size: 28, color: Theme.of(context).colorScheme.primary),
+                onLedgerTap: () => showLedgerPicker(context),
+                actions: actions,
+                showBrand: false)),
       Padding(
           padding:
               EdgeInsets.fromLTRB(compact ? 15 : 19, 0, compact ? 15 : 19, 2),

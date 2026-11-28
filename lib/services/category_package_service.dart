@@ -131,6 +131,7 @@ class CategoryPackageService {
     required String filePath,
     required BaseRepository repository,
     required String mode,
+    required int ledgerId,
   }) async {
     logger.info(_tag, '开始导入分类包: $filePath, mode=$mode');
 
@@ -184,8 +185,11 @@ class CategoryPackageService {
     logger.info(_tag, '已解压 ${iconMapping.length} 个图标到临时目录');
 
     // 3. 获取现有分类
-    final existingCategories = await repository.getAllCategories();
-    // 按 (name, kind) 判重,允许跨 kind 同名(收入「红包」+ 支出「红包」)
+    final existingCategories = (await repository.getAllCategories())
+        .where((c) => c.ledgerId == ledgerId)
+        .toList();
+    // 按 (name, kind) 判重,允许跨 kind 同名(收入「红包」+ 支出「红包」)。
+    // 定制 v38：只按当前账本判重，其他账本的同名分类不冲突。
     final existingKeys = existingCategories
         .map((c) => '${c.name.toLowerCase()}|${c.kind}')
         .toSet();
@@ -257,6 +261,7 @@ class CategoryPackageService {
         sortOrder: Value(item['sort_order'] as int? ?? 0),
         parentId: const Value(null),
         level: const Value(1),
+        ledgerId: Value(ledgerId),
         iconType: Value(item['icon_type'] as String? ?? 'material'),
         customIconPath: Value(customIconPath),
         communityIconId: Value(item['community_icon_id'] as String?),
@@ -266,7 +271,9 @@ class CategoryPackageService {
     }
 
     // 重新获取分类列表（包含刚导入的）
-    final updatedCategories = await repository.getAllCategories();
+    final updatedCategories = (await repository.getAllCategories())
+        .where((c) => c.ledgerId == ledgerId)
+        .toList();
     final keyToId = {
       for (var c in updatedCategories) '${c.name.toLowerCase()}|${c.kind}': c.id
     };
@@ -303,6 +310,7 @@ class CategoryPackageService {
         sortOrder: Value(item['sort_order'] as int? ?? 0),
         parentId: Value(parentId),
         level: const Value(2),
+        ledgerId: Value(ledgerId),
         iconType: Value(item['icon_type'] as String? ?? 'material'),
         customIconPath: Value(customIconPath),
         communityIconId: Value(item['community_icon_id'] as String?),

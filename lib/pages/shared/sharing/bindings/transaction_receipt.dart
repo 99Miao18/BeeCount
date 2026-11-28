@@ -6,6 +6,7 @@ import '../../../../data/db.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/category_utils.dart';
 import '../../../../utils/currencies.dart';
+import '../../../../services/project/project_tags.dart';
 import 'poster_projection.dart';
 
 /// A read-only snapshot. Receipt options never write back to the transaction.
@@ -95,7 +96,8 @@ class TransactionReceipt extends StatelessWidget {
                                 decoration: BoxDecoration(
                                     color: const Color(0xfffff6d9),
                                     borderRadius: BorderRadius.circular(99)),
-                                child: Text('#${tag.name}',
+                                child: Text(
+                                    '#${ProjectTags.displayName(tag.name)}',
                                     style: const TextStyle(
                                         fontSize: 10,
                                         color: Color(0xff8c741a))))

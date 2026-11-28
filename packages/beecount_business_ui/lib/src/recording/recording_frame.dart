@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:beecount_ui/beecount_ui.dart';
 import 'package:flutter/material.dart';
 
@@ -17,66 +19,109 @@ class RecordingFrame extends StatelessWidget {
       this.keyboardVisible = false,
       this.transparentDock = false,
       this.fitCategory = false,
-      this.transfer = false});
+      this.transfer = false,
+      this.dense = false});
   final Widget amount, category, details, keypad, actions;
   final Widget? authors;
   final bool compact, narrow, keyboardVisible, transparentDock, fitCategory;
+
+  /// 定制:内嵌记账页需要给分类区腾出第二排,启用后只收紧间距与底部内边距
+  /// (合计约 8px),方块与键盘按键本身不缩放。由宿主的 [keypad] 自行配合。
+  final bool dense;
   final bool transfer;
   @override
-  Widget build(BuildContext context) {
-    final gap = transfer
-        ? 8.0
-        : compact && narrow
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final gap = dense
             ? 6.0
-            : 8.0;
-    final categoryContent = fitCategory
-        ? Column(
+            : transfer
+                ? 8.0
+                : compact && narrow
+                    ? 6.0
+                    : 8.0;
+        // 数字键盘只在「系统键盘没占着窗口」时显示，否则两块键盘叠在一起，
+        // 中间的区域被压到装不下就是 Bottom overflowed。
+        //
+        // 这里读 FlutterView 的原始 inset，而不是只看宿主传进来的
+        // [keyboardVisible]：键盘弹起时窗口约束会变，LayoutBuilder 一定会重跑，
+        // 而宿主页面不一定重建（真机上就出现过键盘已弹起、数字键盘还留着）。
+        final view = View.maybeOf(context);
+        final imeInset = view == null
+            ? MediaQuery.viewInsetsOf(context).bottom
+            : view.viewInsets.bottom / view.devicePixelRatio;
+        final showKeypad =
+            !keyboardVisible && imeInset <= kMinInteractiveDimension;
+        // 分类卡外框：圆角 + 卡片底色，尺寸完全由子节点决定（不再撑满整段），
+        // 否则格子只占两排时卡片会被拉伸成一大块白。
+        Widget categoryCard(Widget child) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: ColoredBox(
+                    color: BeeCardTheme.of(context).surface, child: child)));
+        // 定制：内嵌记账页（fitCategory）把「分类卡 + 明细行」放进同一个可滚动
+        // 区域 —— 卡片按内容收口、明细行紧贴其下；键盘或小屏把可用高度压到装不
+        // 下时由滚动吸收，不再出现 Bottom overflowed（红黑条）。
+        final Widget fitContent = SingleChildScrollView(
             key: const ValueKey('recording-content'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-                Expanded(child: category),
-                if (authors != null) authors!
-              ])
-        : SingleChildScrollView(
+            keyboardDismissBehavior:
+                ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  categoryCard(Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [category, if (authors != null) authors!])),
+                  SizedBox(height: gap),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: details),
+                ]));
+        final Widget sheetContent = SingleChildScrollView(
             key: const ValueKey('recording-content'),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            keyboardDismissBehavior:
+                ScrollViewKeyboardDismissBehavior.onDrag,
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [category, if (authors != null) authors!]));
-    return Column(children: [
-      // Separate the segmented header from every amount card in both themes.
-      SizedBox(key: const ValueKey('recording-header-gap'), height: gap),
-      Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16), child: amount),
-      SizedBox(height: gap),
-      Expanded(
-          child: Padding(
+        return Column(children: [
+          // Separate the segmented header from every amount card in both themes.
+          SizedBox(key: const ValueKey('recording-header-gap'), height: gap),
+          Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: ColoredBox(
-                      color: BeeCardTheme.of(context).surface,
-                      child: categoryContent)))),
-      SizedBox(height: gap),
-      Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16), child: details),
-      Material(
-          color: transparentDock
-              ? Colors.transparent
-              : BeeCardTheme.of(context).canvas,
-          child: Padding(
-              key: const ValueKey('recording-dock'),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (!keyboardVisible) keypad,
-                    SizedBox(height: compact && narrow ? 5 : 7),
-                    actions
-                  ])))
-    ]);
-  }
+              child: amount),
+          SizedBox(height: gap),
+          Expanded(
+              child: fitCategory
+                  ? fitContent
+                  : Column(children: [
+                      Flexible(
+                          fit: FlexFit.loose,
+                          child: categoryCard(sheetContent)),
+                      SizedBox(height: gap),
+                      Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: details),
+                    ])),
+          Material(
+              color: transparentDock
+                  ? Colors.transparent
+                  : BeeCardTheme.of(context).canvas,
+              child: Padding(
+                  key: const ValueKey('recording-dock'),
+                  padding: EdgeInsets.fromLTRB(
+                      16, dense ? 6 : 8, 16, dense ? 10 : 12),
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (showKeypad) keypad,
+                        SizedBox(height: compact && narrow ? 5 : 7),
+                        actions
+                      ])))
+        ]);
+      });
 }
 
 class RecordingActions extends StatelessWidget {
@@ -100,7 +145,7 @@ class RecordingActions extends StatelessWidget {
     Widget action(String key, Widget child, VoidCallback? callback,
             {Color? background, Color? foreground}) =>
         SizedBox(
-            height: 44,
+            height: 46,
             child: FilledButton(
                 key: ValueKey(key),
                 onPressed: callback,
@@ -116,52 +161,67 @@ class RecordingActions extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12))),
                 child: child));
-    return Row(children: [
-      if (showSaveNext) ...[
-        Expanded(
-            flex: 100,
-            child: action(
-                'recording-save-next',
-                Text(saveNextLabel ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12)),
-                onSaveNext)),
-        const SizedBox(width: 6)
-      ],
-      Expanded(
-          flex: 75,
-          child: action('recording-equals',
-              const Text('=', style: TextStyle(fontSize: 23)), onEquals,
-              background: Color.alphaBlend(
-                  theme.colorScheme.primary.withValues(alpha: .12),
-                  colors.surface),
-              foreground: Color.lerp(theme.colorScheme.primary,
-                  theme.colorScheme.onSurface, .42))),
-      const SizedBox(width: 6),
-      Expanded(
-          flex: 160,
-          child: action(
-              'recording-save',
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                if (saving)
-                  const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                else
-                  const BeeLineIcon('Check', size: 17),
-                const SizedBox(width: 5),
-                Flexible(
-                    child: Text(saveLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500)))
-              ]),
-              onSave,
-              background: theme.colorScheme.primary,
-              foreground: theme.colorScheme.onPrimary))
-    ]);
+    // 定制：按钮顺序改为「保存并再记一笔 / 保存 / =」，等号移到最右侧，
+    // 宽度按键盘 4 列算出来，和上方 ÷ × − + 那一列对齐成同一尺寸。
+    return LayoutBuilder(builder: (context, constraints) {
+      const gap = 6.0;
+      const keypadGap = 5.0;
+      final keyWidth =
+          math.max(48.0, (constraints.maxWidth - 3 * keypadGap) / 4);
+      return SizedBox(
+          height: 46,
+          child: Row(children: [
+            if (showSaveNext) ...[
+              Expanded(
+                  flex: 3,
+                  child: action(
+                      'recording-save-next',
+                      Text(saveNextLabel ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)),
+                      onSaveNext)),
+              const SizedBox(width: gap)
+            ],
+            Expanded(
+                flex: 3,
+                child: action(
+                    'recording-save',
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (saving)
+                        const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                      else
+                        const BeeLineIcon('Check', size: 17),
+                      const SizedBox(width: 5),
+                      Flexible(
+                          child: Text(saveLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500)))
+                    ]),
+                    onSave,
+                    background: theme.colorScheme.primary,
+                    foreground: theme.colorScheme.onPrimary)),
+            const SizedBox(width: gap),
+            SizedBox(
+                width: keyWidth,
+                child: action(
+                    'recording-equals',
+                    const Text('=', style: TextStyle(fontSize: 23)),
+                    onEquals,
+                    background: Color.alphaBlend(
+                        theme.colorScheme.primary.withValues(alpha: .12),
+                        colors.surface),
+                    foreground: Color.lerp(
+                        theme.colorScheme.primary,
+                        theme.colorScheme.onSurface,
+                        .42))),
+          ]));
+    });
   }
 }
 

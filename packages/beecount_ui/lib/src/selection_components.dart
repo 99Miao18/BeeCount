@@ -333,12 +333,17 @@ class BeeIconChoiceGrid<T> extends StatelessWidget {
       required this.value,
       required this.onChanged,
       this.columns = 4,
-      this.showLabels = true});
+      this.showLabels = true,
+      this.iconSize = 24});
   final List<BeeIconChoice<T>> items;
   final T value;
   final ValueChanged<T> onChanged;
   final int columns;
   final bool showLabels;
+
+  /// 单格图标的边长。彩色图标自带底色块，看起来比线框图标小，调用方可以
+  /// 单独放大一点。
+  final double iconSize;
   @override
   Widget build(BuildContext context) => GridView.count(
       shrinkWrap: true,
@@ -380,8 +385,8 @@ class BeeIconChoiceGrid<T> extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     SizedBox(
-                                        width: 24,
-                                        height: 24,
+                                        width: iconSize,
+                                        height: iconSize,
                                         child: item.icon),
                                     if (showLabels) const SizedBox(height: 5),
                                     if (showLabels)

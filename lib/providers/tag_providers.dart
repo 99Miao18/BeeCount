@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
+import '../services/project/project_tags.dart';
+import '../utils/project_scope_queries.dart';
 import '../utils/shared_ledger_picker_filter.dart';
 import 'database_providers.dart';
 import 'shared_ledger_providers.dart';
@@ -36,15 +38,28 @@ final allTagsProvider = FutureProvider<List<Tag>>((ref) async {
 
 /// §7 共享账本 picker:按当前 ledger 过滤后的 tags。
 /// Editor + 共享账本 → 只看 Owner mirror tags;单人账本 / Owner → 排除 mirror。
+/// 之后再按当前账本钥匙剔除别账本的项目（项目 = `◆` 前缀标签，见
+/// `services/project/project_tags.dart`）。
 final tagsForCurrentLedgerProvider = FutureProvider<List<Tag>>((ref) async {
   ref.watch(tagListRefreshProvider);
   ref.watch(sharedResourceRefreshProvider);  // WS 推送后强制 rebuild
   final repo = ref.watch(repositoryProvider);
+  final scopeFuture = ref.watch(currentProjectScopeProvider.future);
   final all = await repo.getAllTags();
   if (repo is! LocalRepository) return all;
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final ctx = await repo.db.loadLedgerPickerContext(ledgerId);
-  return repo.db.filterTagsForLedger(all, ctx);
+  final filtered = await repo.db.filterTagsForLedger(all, ctx);
+  final usage = await repo.db.projectTagUsage(ledgerId);
+  final scope = await scopeFuture;
+  final localScope = ProjectTags.localScopeKey(ledgerId);
+  return filtered
+      .where((tag) => ProjectTags.belongsToLedger(tag.name,
+          scope: scope,
+          localScope: localScope,
+          usedInLedger: usage.usedHere.contains(tag.id),
+          usedAnywhere: usage.usedAnywhere.contains(tag.id)))
+      .toList();
 });
 
 /// 标签列表带统计信息 Provider（响应式）

@@ -231,7 +231,8 @@ class AnalyticsContent extends ConsumerWidget {
                   key: ValueKey((scope, month, type, data.total)),
                   data: data,
                   scope: scope,
-                  month: month),
+                  month: month,
+                  type: type),
               action: Text(l.v4InsightsSortedByAmount,
                   style: TextStyle(fontSize: 10, color: theme.hintColor)))
         ]

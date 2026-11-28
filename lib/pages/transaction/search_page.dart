@@ -25,9 +25,13 @@ class SearchPage extends ConsumerStatefulWidget {
       {super.key,
       this.initialBatchMode = false,
       this.initialFilter = const TransactionSearchFilter(),
-      this.initialOpenFilter = false});
+      this.initialOpenFilter = false,
+      this.title});
   final bool initialBatchMode, initialOpenFilter;
   final TransactionSearchFilter initialFilter;
+
+  /// 覆盖页头标题(如从洞察「未分类」下钻时显示「未分类」)。
+  final String? title;
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
 }
@@ -215,7 +219,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         }
       }
       for (final id in ids) {
-        await repo.deleteTransaction(id);
+        await repo.deleteTransactionToTrash(id);
       }
       return ids.length;
     }, l.searchBatchDeleteSuccess, l.searchBatchDeleteFailed);
@@ -224,6 +228,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   List<Widget> _filterChips(TransactionSearchController c, AppLocalizations l) {
     final f = c.filter;
     final labels = <String, String>{
+      if (f.uncategorized) 'uncategorized': l.commonUncategorized,
       if (f.category != null)
         'category': CategoryUtils.displayName(f.category!.name, l,
             kind: f.category!.kind),
@@ -263,7 +268,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     minimum: e.key == 'amount' ? null : f.minimum,
                     maximum: e.key == 'amount' ? null : f.maximum,
                     start: e.key == 'date' ? null : f.start,
-                    end: e.key == 'date' ? null : f.end))))
+                    end: e.key == 'date' ? null : f.end,
+                    uncategorized:
+                        e.key == 'uncategorized' ? false : f.uncategorized))))
         .toList();
   }
 
@@ -303,7 +310,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ]),
                 body: Column(children: [
                   BeePageHeader(
-                      title: c.batch ? l.searchBatchMode : l.v4SearchTitle,
+                      title: c.batch
+                          ? l.searchBatchMode
+                          : widget.title ?? l.v4SearchTitle,
                       leading: BackButton(
                           onPressed: _writing
                               ? null

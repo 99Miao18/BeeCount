@@ -5,6 +5,7 @@ import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/base_repository.dart';
 import '../cloud/sync/change_tracker.dart';
+import '../services/project/project_tags.dart';
 import '../services/system/logger_service.dart';
 import '../utils/shared_ledger_picker_filter.dart';
 import 'shared_ledger_providers.dart';
@@ -64,6 +65,22 @@ final ledgerByIdProvider =
   return await repo.getLedgerById(ledgerId);
 });
 
+/// 当前账本的项目隔离钥匙（账本 syncId 派生，跨设备一致）。
+///
+/// 项目名在库里存成 `◆<钥匙>|<项目名>`，两个账本因此可以有同名但互相独立的
+/// 项目。放在这里而不是 project_providers，是为了让 tag_providers 也能用，
+/// 避免两个 provider 文件互相 import。详见 `services/project/project_tags.dart`。
+final currentProjectScopeProvider = FutureProvider<String>((ref) async {
+  final ledgerId = ref.watch(currentLedgerIdProvider);
+  // 账本 syncId 可能在首次同步前是 null，同步回来后要重算钥匙，
+  // 所以跟着共享资源刷新信号一起重建，而不是读 ledgerByIdProvider 的缓存。
+  ref.watch(sharedResourceRefreshProvider);
+  final repo = ref.watch(repositoryProvider);
+  final ledger = await repo.getLedgerById(ledgerId);
+  return ProjectTags.scopeKey(
+      ledgerSyncId: ledger?.syncId, ledgerId: ledgerId);
+});
+
 // 获取所有账本列表（Stream版本）
 final ledgersStreamProvider = StreamProvider<List<Ledger>>((ref) {
   final repo = ref.watch(repositoryProvider);
@@ -116,18 +133,26 @@ final appInitProvider = FutureProvider<void>((ref) async {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   // 同步代数 bump 后重算，让 web 改分类能立即反映到 mobile。
   ref.watch(syncGenerationProvider);
+  final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
-  return await repo.getAllCategories();
+  final all = await repo.getAllCategories();
+  // 定制 v38：分类严格绑定账本，只显示当前账本的分类。
+  return all.where((c) => c.ledgerId == ledgerId).toList();
 });
 
 // 分类与交易笔数组合Provider（响应式版本）
 // 使用 autoDispose 在页面关闭时自动取消订阅
 final categoriesWithCountProvider = StreamProvider.autoDispose<
     List<({Category category, int transactionCount})>>((ref) {
+  final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
-  // §7 决策 v25:Owner 资源不再 mirror 主表,管理页直接读主 Categories
-  // 自然只看到用户自己 user-global 行,无需过滤。
-  return repo.watchCategoriesWithCount();
+  // §7 决策 v25:Owner 资源不再 mirror 主表,管理页直接读主 Categories。
+  // 定制 v38：再按账本归属过滤，只有当前账本的分类会出现在管理页。
+  return repo.watchCategoriesWithCount().map(
+        (rows) => rows
+            .where((r) => r.category.ledgerId == ledgerId)
+            .toList(),
+      );
 });
 
 // 虚拟转账分类Provider（全局缓存，用于获取转账图标）
