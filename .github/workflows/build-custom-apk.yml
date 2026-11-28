@@ -110,6 +110,9 @@ jobs:
           name: beecount-custom-apk
           path: build/app/outputs/flutter-apk/app-dev-debug.apk
           if-no-files-found: error
+          # 每个包 70MB 上下，长期堆积会撑爆仓库产物配额（曾累积到 2GB+）。
+          # 本地已存备份，这里只留当天，够下载即可。
+          retention-days: 1
 
       # Runner 是一次性的，但仍显式抹掉还原出来的密钥库，避免落在可下载的 workspace 缓存里。
       - name: 清理临时密钥库
