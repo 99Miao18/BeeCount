@@ -191,6 +191,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         ? 4
         : ref.watch(recordingCategoryColumnsProvider
             .select((preference) => preference.valueOrNull ?? 4));
+    // 内嵌在底部 tab 时页面常驻，initState 里读到的账本会过期：明细页换了
+    // 账本，这里要跟着换，否则分类和账户还是旧账本的。
+    ref.listen<int>(currentLedgerIdProvider, (previous, next) {
+      if (previous == next || next == _cardLedgerId) return;
+      _followActiveLedger(next);
+    });
     return Theme(
       data: theme.copyWith(
           textButtonTheme: TextButtonThemeData(
@@ -347,10 +353,43 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     );
   }
 
+  /// 其它页面（明细/洞察等）切换了账本：把记账页的草稿切到新账本的上下文。
+  /// 只换账本本身，不反写 provider（provider 已经是新值）。
+  Future<void> _followActiveLedger(int ledgerId) async {
+    if (widget.editingTransactionId != null || widget.isCopy) return;
+    // 转账由 TransferForm 自己跟随账本，这里只处理收/支的默认账户。
+    final kind = _selectedType == 1
+        ? 'income'
+        : _selectedType == 2
+            ? 'transfer'
+            : 'expense';
+    final accountId = kind == 'transfer'
+        ? null
+        : await defaultRecordingAccount(ref, kind, ledgerId);
+    if (!mounted ||
+        ref.read(currentLedgerIdProvider) != ledgerId ||
+        _cardSaving) {
+      return;
+    }
+    _moreCategoriesFallback.value = null;
+    setState(() {
+      _cardLedgerId = ledgerId;
+      _cardInitialAccountId = accountId;
+      _cardCategory = null;
+      _cardDirty = false;
+      _cardReset = true;
+      _cardInitialDate = DateTime.now();
+      _retryTransactionId = null;
+      _cardEditorKey = GlobalKey<AmountEditorSheetState>();
+    });
+  }
+
   Future<void> _changeCardLedger(int ledgerId) async {
     final kind = _selectedType == 1 ? 'income' : 'expense';
     final accountId = await defaultRecordingAccount(ref, kind, ledgerId);
     if (!mounted) return;
+    // 先认账再写 provider：否则全局监听会把它当成「外部切换」再重置一次。
+    _cardLedgerId = ledgerId;
     ref.read(currentLedgerIdProvider.notifier).state = ledgerId;
     _moreCategoriesFallback.value = null;
     setState(() {

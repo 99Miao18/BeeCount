@@ -22,6 +22,10 @@ import 'category_migration_page.dart';
 
 part 'editor/bindings/category_edit_actions.dart';
 
+/// 图标选择格边长。彩色图标自带底色块，视觉上比线框图标小一圈，整格比
+/// 默认的 24 放大 10% 找平。
+const double iconChoiceExtent = 26.5;
+
 class CategoryEditPage extends ConsumerStatefulWidget {
   const CategoryEditPage(
       {super.key, this.category, required this.kind, this.parentCategory});
@@ -40,7 +44,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
     BeeIconChoice<String> choice(String key) => BeeIconChoice(
         value: key,
         label: CategoryIconStyle.glyphOf(key),
-        icon: CategoryIconGlyph(icon: key, size: 24));
+        icon: CategoryIconGlyph(icon: key, size: iconChoiceExtent));
     return V4PageScaffold(
         body: Column(children: [
       BeePageHeader(
@@ -169,6 +173,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage>
                                   ])
                           ],
                           commonItems: const [],
+                          iconExtent: iconChoiceExtent,
                           presetLabel: l.v4CategoryPresetIcons,
                           customLabel: l.categoryCustomIconTitle,
                           commonLabel: l.v4CategoryCommonIcons,

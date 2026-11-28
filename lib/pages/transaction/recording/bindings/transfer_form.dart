@@ -48,7 +48,7 @@ class TransferForm extends ConsumerStatefulWidget {
 
 class TransferFormState extends ConsumerState<TransferForm> {
   int? _fromAccountId, _toAccountId, _retryTransactionId;
-  late final int _ledgerId;
+  late int _ledgerId;
   late DateTime _initialDate;
   GlobalKey<AmountEditorSheetState> _editorKey =
       GlobalKey<AmountEditorSheetState>();
@@ -78,6 +78,23 @@ class TransferFormState extends ConsumerState<TransferForm> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // 内嵌在底部 tab 时常驻，账本可能在明细页被换掉：转账也要跟着换账本，
+    // 否则账户列表和保存目标仍是旧账本。
+    ref.listen<int>(currentLedgerIdProvider, (previous, next) {
+      if (previous == next ||
+          next == _ledgerId ||
+          widget.editingTransactionId != null) {
+        return;
+      }
+      setState(() {
+        _ledgerId = next;
+        _fromAccountId = null;
+        _toAccountId = null;
+        _retryTransactionId = null;
+        _reset = true;
+        _editorKey = GlobalKey<AmountEditorSheetState>();
+      });
+    });
     final base = ref.watch(currentLedgerCurrencyProvider);
     final query = (
       ledgerId: _ledgerId,

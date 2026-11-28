@@ -50,6 +50,7 @@ class BeeCategoryIconEditor extends StatefulWidget {
     this.locateByValue = true,
     this.loading = false,
     this.enabled = true,
+    this.iconExtent = 24,
   });
   final BeeCategoryIconSource source;
   final String value;
@@ -69,6 +70,9 @@ class BeeCategoryIconEditor extends StatefulWidget {
   /// 直接停在第一组，避免被占位值带到别的分组。
   final bool locateByValue;
   final bool loading, enabled;
+
+  /// 单格图标边长；彩色图标带底色块，会显得比线框小，宿主可以调大一点。
+  final double iconExtent;
 
   @override
   State<BeeCategoryIconEditor> createState() => _BeeCategoryIconEditorState();
@@ -149,6 +153,7 @@ class _BeeCategoryIconEditorState extends State<BeeCategoryIconEditor> {
                   value: widget.value,
                   columns: columns,
                   showLabels: false,
+                  iconSize: widget.iconExtent,
                   onChanged: widget.onChanged);
           final sections = active.effectiveSections;
           if (sections.length == 1 && sections.first.label.isEmpty) {
